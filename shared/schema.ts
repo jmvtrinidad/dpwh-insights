@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -44,7 +44,7 @@ export const projects = pgTable("projects", {
   contractName: text("contract_name").notNull(),
   contractor: text("contractor").array().notNull(),
   implementingOffice: text("implementing_office").notNull(),
-  contractCost: integer("contract_cost").notNull(),
+  contractCost: decimal("contract_cost", { precision: 15, scale: 2 }).notNull(),
   contractEffectivityDate: text("contract_effectivity_date").notNull(),
   contractExpiryDate: text("contract_expiry_date").notNull(),
   status: text("status").notNull(),
@@ -80,13 +80,13 @@ export const insertProjectSchema = createInsertSchema(projects).extend({
   province: z.union([z.string(), z.null()]).transform(val => val || ""),
   municipality: z.union([z.string(), z.null()]).transform(val => val || ""),
   barangay: z.union([z.string(), z.null()]).transform(val => val || ""),
-  // Handle float to integer conversion for contract cost
+  // Handle decimal/float values for contract cost
   contractCost: z.union([z.number(), z.string()])
     .transform(val => {
       const num = typeof val === 'string' ? parseFloat(val) : val;
-      return Math.round(num);
+      return num.toString();
     })
-    .pipe(z.number().int()),
+    .pipe(z.string()),
   // Handle float to integer for accomplishment percentage
   accomplishmentInPercentage: z.union([z.number(), z.string()])
     .transform(val => {
