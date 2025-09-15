@@ -205,8 +205,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           validatedProjects.push(validatedProject);
         } catch (error) {
           if (error instanceof z.ZodError) {
+            console.error(`Validation error for project ${i}:`, error.errors);
             errors.push({ index: i, errors: error.errors });
           } else {
+            console.error(`Unknown validation error for project ${i}:`, error);
             errors.push({ index: i, error: "Unknown validation error" });
           }
         }

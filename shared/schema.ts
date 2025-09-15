@@ -60,7 +60,20 @@ export const projects = pgTable("projects", {
 });
 
 export const insertProjectSchema = createInsertSchema(projects).extend({
-  status: z.enum(PROJECT_STATUS_VALUES)
+  status: z.string()
+    .transform((val) => {
+      // Case-insensitive matching for status values
+      const normalizedVal = val.trim();
+      const found = PROJECT_STATUS_VALUES.find(
+        status => status.toLowerCase() === normalizedVal.toLowerCase()
+      );
+      return found || normalizedVal;
+    })
+    .pipe(z.enum(PROJECT_STATUS_VALUES)),
+  // Make location fields truly optional
+  province: z.string().default(""),
+  municipality: z.string().default(""),
+  barangay: z.string().default("")
 });
 export const updateProjectSchema = insertProjectSchema.partial();
 
