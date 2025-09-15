@@ -71,36 +71,43 @@ export default function DashboardLayout({
   // Track previous location search to detect URL changes
   const prevLocationSearchRef = useRef<string>('');
   
-  // Initialize state from URL on component mount
+  // Single useEffect to handle initialization from URL
   useEffect(() => {
-    const urlParams = parseUrlParams(window.location.search);
-    console.log('Initializing dashboard state from URL:', urlParams);
+    const fullSearch = window.location.search;
     
-    setFilters(urlParams.filters);
-    setActiveTab(urlParams.activeTab);
-    prevLocationSearchRef.current = window.location.search;
-    setIsInitialized(true);
-  }, []); // Only run once on mount
-
-  // Watch for URL changes from browser navigation (back/forward) or programmatic changes
-  useEffect(() => {
-    const currentSearch = location.split('?')[1] || '';
-    const fullSearch = currentSearch ? `?${currentSearch}` : '';
-    
-    // Only process URL changes if they're different from previous and not during our own updates
-    if (isInitialized && !isUpdatingFromUrl && fullSearch !== prevLocationSearchRef.current) {
-      console.log('URL changed, updating state from:', fullSearch);
-      setIsUpdatingFromUrl(true);
-      
+    // Initialize state from URL parameters on first load
+    if (!isInitialized) {
+      console.log('Initializing dashboard state from window.location.search:', fullSearch);
       const urlParams = parseUrlParams(fullSearch);
       setFilters(urlParams.filters);
       setActiveTab(urlParams.activeTab);
       prevLocationSearchRef.current = fullSearch;
-      
-      // Reset the flag after state updates complete
-      setTimeout(() => setIsUpdatingFromUrl(false), 0);
+      setIsInitialized(true);
     }
-  }, [location, isInitialized, isUpdatingFromUrl]);
+  }, [isInitialized]);
+
+  // Handle browser navigation (back/forward buttons)
+  useEffect(() => {
+    const handlePopState = () => {
+      const fullSearch = window.location.search;
+      
+      if (!isUpdatingFromUrl && fullSearch !== prevLocationSearchRef.current) {
+        console.log('Browser navigation detected, updating state from window.location.search:', fullSearch);
+        setIsUpdatingFromUrl(true);
+        
+        const urlParams = parseUrlParams(fullSearch);
+        setFilters(urlParams.filters);
+        setActiveTab(urlParams.activeTab);
+        prevLocationSearchRef.current = fullSearch;
+        
+        // Reset the flag after state updates
+        setIsUpdatingFromUrl(false);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [isUpdatingFromUrl]);
 
   // Note: URL updates are now handled directly in handleFilterChange and tab change handlers
   // This avoids duplicate updates and provides more control over when to use debounced vs immediate updates
@@ -163,7 +170,8 @@ export default function DashboardLayout({
       } else {
         updateUrlImmediately(newFilters, activeTab);
       }
-      prevLocationSearchRef.current = `?${buildUrlParams(newFilters, activeTab)}` || '';
+      const params = buildUrlParams(newFilters, activeTab);
+      prevLocationSearchRef.current = params ? `?${params}` : '';
     }
   };
 
@@ -174,7 +182,8 @@ export default function DashboardLayout({
     // Update URL immediately when clearing filters
     if (!isUpdatingFromUrl) {
       updateUrlImmediately(DEFAULT_FILTER_STATE, activeTab);
-      prevLocationSearchRef.current = `?${buildUrlParams(DEFAULT_FILTER_STATE, activeTab)}` || '';
+      const params = buildUrlParams(DEFAULT_FILTER_STATE, activeTab);
+      prevLocationSearchRef.current = params ? `?${params}` : '';
     }
   };
 
@@ -185,7 +194,8 @@ export default function DashboardLayout({
     // Update URL immediately when tab changes
     if (!isUpdatingFromUrl) {
       updateUrlImmediately(filters, newTab);
-      prevLocationSearchRef.current = `?${buildUrlParams(filters, newTab)}` || '';
+      const params = buildUrlParams(filters, newTab);
+      prevLocationSearchRef.current = params ? `?${params}` : '';
     }
   };
 
