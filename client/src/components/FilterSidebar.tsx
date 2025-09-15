@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { X, Filter, ChevronDown, ChevronRight } from "lucide-react";
+import { X, Filter, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 interface FilterOptions {
@@ -18,6 +19,7 @@ interface FilterOptions {
 }
 
 interface FilterState {
+  search: string;
   region: string;
   implementingOffice: string;
   contractor: string;
@@ -49,8 +51,7 @@ export default function FilterSidebar({
 }: FilterSidebarProps) {
   const [openSections, setOpenSections] = useState({
     location: true,
-    project: true,
-    administration: true
+    project: true
   });
 
   const toggleSection = (section: keyof typeof openSections) => {
@@ -63,7 +64,7 @@ export default function FilterSidebar({
   const getActiveFilters = () => {
     const activeFilters: Array<{ key: keyof FilterState; value: string; label: string }> = [];
     Object.entries(filters).forEach(([key, value]) => {
-      if (value && value !== '__all__') {
+      if (key !== 'search' && value && value !== '__all__') {
         activeFilters.push({
           key: key as keyof FilterState,
           value,
@@ -127,6 +128,22 @@ export default function FilterSidebar({
 
       <div className="flex-1 overflow-auto">
         <div className="p-4 space-y-6">
+          {/* Search */}
+          <Card className="p-4">
+            <div>
+              <label className="text-sm font-medium text-muted-foreground mb-2 block">Search Projects</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by project name, contractor, or office..."
+                  value={filters.search}
+                  onChange={(e) => onFilterChange('search', e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search-projects"
+                />
+              </div>
+            </div>
+          </Card>
           {/* Location Filters */}
           <Card className="p-4">
             <Collapsible
@@ -152,6 +169,21 @@ export default function FilterSidebar({
                       <SelectItem value="__all__">All regions</SelectItem>
                       {options.regions.map(region => (
                         <SelectItem key={region} value={region}>{region}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Implementing Office</label>
+                  <Select value={filters.implementingOffice} onValueChange={(value) => onFilterChange('implementingOffice', value)}>
+                    <SelectTrigger data-testid="select-implementing-office">
+                      <SelectValue placeholder="All offices" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">All offices</SelectItem>
+                      {options.implementingOffices.map(office => (
+                        <SelectItem key={office} value={office}>{office}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -268,38 +300,6 @@ export default function FilterSidebar({
             </Collapsible>
           </Card>
 
-          {/* Administration Filters */}
-          <Card className="p-4">
-            <Collapsible
-              open={openSections.administration}
-              onOpenChange={() => toggleSection('administration')}
-            >
-              <CollapsibleTrigger className="flex items-center justify-between w-full text-left">
-                <h3 className="font-medium text-sidebar-foreground">Administration</h3>
-                {openSections.administration ? (
-                  <ChevronDown className="h-4 w-4" />
-                ) : (
-                  <ChevronRight className="h-4 w-4" />
-                )}
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 mt-3">
-                <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Implementing Office</label>
-                  <Select value={filters.implementingOffice} onValueChange={(value) => onFilterChange('implementingOffice', value)}>
-                    <SelectTrigger data-testid="select-implementing-office">
-                      <SelectValue placeholder="All offices" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All offices</SelectItem>
-                      {options.implementingOffices.map(office => (
-                        <SelectItem key={office} value={office}>{office}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </Card>
         </div>
       </div>
 

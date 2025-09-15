@@ -30,6 +30,7 @@ interface Project {
 }
 
 interface FilterState {
+  search: string;
   region: string;
   implementingOffice: string;
   contractor: string;
@@ -64,10 +65,11 @@ export default function DashboardLayout({
   const [activeTab, setActiveTab] = useState("analytics");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
+    search: '',
     region: '__all__',
     implementingOffice: '__all__',
     contractor: '__all__',
-    status: '__all__',
+    status: 'Completed',
     year: '__all__',
     province: '__all__',
     municipality: '__all__',
@@ -93,7 +95,25 @@ export default function DashboardLayout({
 
   // Apply filters to projects
   const filteredProjects = projects.filter(project => {
+    // Handle search filter
+    if (filters.search && filters.search.trim() !== '') {
+      const searchTerm = filters.search.toLowerCase();
+      const searchableFields = [
+        project.contractName?.toLowerCase() || '',
+        project.contractor?.toLowerCase() || '',
+        project.implementingOffice?.toLowerCase() || ''
+      ];
+      
+      const matchesSearch = searchableFields.some(field => 
+        field.includes(searchTerm)
+      );
+      
+      if (!matchesSearch) return false;
+    }
+
+    // Handle other filters
     return Object.entries(filters).every(([key, value]) => {
+      if (key === 'search') return true; // Already handled above
       if (!value || value === '__all__') return true;
       return project[key as keyof Project] === value;
     });
@@ -110,10 +130,11 @@ export default function DashboardLayout({
   const handleClearFilters = () => {
     console.log('Clearing all filters');
     setFilters({
+      search: '',
       region: '__all__',
       implementingOffice: '__all__',
       contractor: '__all__',
-      status: '__all__',
+      status: 'Completed',
       year: '__all__',
       province: '__all__',
       municipality: '__all__',
@@ -121,7 +142,9 @@ export default function DashboardLayout({
     });
   };
 
-  const activeFiltersCount = Object.values(filters).filter(value => value && value !== '__all__').length;
+  const activeFiltersCount = Object.entries(filters).filter(([key, value]) => 
+    key !== 'search' && value && value !== '__all__'
+  ).length;
 
   return (
     <div className="flex h-screen bg-background">

@@ -13,7 +13,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  Search, 
   ChevronLeft, 
   ChevronRight, 
   ChevronsLeft, 
@@ -53,7 +52,6 @@ type SortField = keyof Project;
 type SortDirection = 'asc' | 'desc';
 
 export default function ProjectsTable({ projects, isLoading = false }: ProjectsTableProps) {
-  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [sortField, setSortField] = useState<SortField>('contractId');
@@ -70,18 +68,9 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
   };
 
   const filteredAndSortedProjects = useMemo(() => {
-    let filtered = projects;
+    let filtered = [...projects];
 
-    // Filter by search term
-    if (searchTerm) {
-      filtered = projects.filter(project =>
-        Object.values(project).some(value =>
-          value.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      );
-    }
-
-    // Sort
+    // Sort projects (filtering is now handled by DashboardLayout)
     filtered.sort((a, b) => {
       const aValue = a[sortField];
       const bValue = b[sortField];
@@ -101,7 +90,7 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
     });
 
     return filtered;
-  }, [projects, searchTerm, sortField, sortDirection]);
+  }, [projects, sortField, sortDirection]);
 
   const totalPages = Math.ceil(filteredAndSortedProjects.length / pageSize);
   const startIndex = (currentPage - 1) * pageSize;
@@ -196,21 +185,8 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Search and Controls */}
-        <div className="flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search projects..."
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="pl-10"
-              data-testid="input-search-projects"
-            />
-          </div>
+        {/* Table Controls */}
+        <div className="flex items-center justify-end gap-4">
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => {
@@ -249,7 +225,7 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
               {currentProjects.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    {searchTerm ? 'No projects match your search criteria.' : 'No projects available.'}
+                    'No projects available.'
                   </TableCell>
                 </TableRow>
               ) : (
