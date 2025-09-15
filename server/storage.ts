@@ -198,11 +198,18 @@ export class DbStorage implements IStorage {
   }
 
   async getAllProjects(): Promise<Project[]> {
-    const result = await db.select().from(projects);
-    return result;
+    try {
+      const result = await db.select().from(projects);
+      console.log('DbStorage.getAllProjects returning', result.length, 'projects');
+      return result;
+    } catch (error) {
+      console.error('DbStorage.getAllProjects error:', error);
+      throw error;
+    }
   }
 
   async createProject(insertProject: InsertProject): Promise<Project> {
+    console.log('DbStorage.createProject called with:', insertProject.contractId);
     const projectToInsert = {
       ...insertProject,
       sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
@@ -213,15 +220,21 @@ export class DbStorage implements IStorage {
       barangay: insertProject.barangay || "",
     };
 
-    const result = await db.insert(projects)
-      .values(projectToInsert)
-      .onConflictDoUpdate({
-        target: projects.contractId,
-        set: projectToInsert
-      })
-      .returning();
-    
-    return result[0];
+    try {
+      const result = await db.insert(projects)
+        .values(projectToInsert)
+        .onConflictDoUpdate({
+          target: projects.contractId,
+          set: projectToInsert
+        })
+        .returning();
+      
+      console.log('DbStorage.createProject result:', result[0]?.contractId);
+      return result[0];
+    } catch (error) {
+      console.error('DbStorage.createProject error:', error);
+      throw error;
+    }
   }
 
   async updateProject(contractId: string, updateProject: UpdateProject): Promise<Project | undefined> {
@@ -242,6 +255,7 @@ export class DbStorage implements IStorage {
   }
 
   async createManyProjects(insertProjects: InsertProject[]): Promise<Project[]> {
+    console.log('DbStorage.createManyProjects called with', insertProjects.length, 'projects');
     if (insertProjects.length === 0) {
       return [];
     }
@@ -259,27 +273,33 @@ export class DbStorage implements IStorage {
     // Use upsert approach for batch insertion
     const result = [];
     
-    // Process in batches to avoid potential query size limits
-    const batchSize = 100;
-    for (let i = 0; i < projectsToInsert.length; i += batchSize) {
-      const batch = projectsToInsert.slice(i, i + batchSize);
-      
-      for (const project of batch) {
-        const insertResult = await db.insert(projects)
-          .values(project)
-          .onConflictDoUpdate({
-            target: projects.contractId,
-            set: project
-          })
-          .returning();
+    try {
+      // Process in batches to avoid potential query size limits
+      const batchSize = 100;
+      for (let i = 0; i < projectsToInsert.length; i += batchSize) {
+        const batch = projectsToInsert.slice(i, i + batchSize);
         
-        if (insertResult[0]) {
-          result.push(insertResult[0]);
+        for (const project of batch) {
+          const insertResult = await db.insert(projects)
+            .values(project)
+            .onConflictDoUpdate({
+              target: projects.contractId,
+              set: project
+            })
+            .returning();
+          
+          if (insertResult[0]) {
+            result.push(insertResult[0]);
+          }
         }
       }
+      
+      console.log('DbStorage.createManyProjects successfully saved', result.length, 'projects');
+      return result;
+    } catch (error) {
+      console.error('DbStorage.createManyProjects error:', error);
+      throw error;
     }
-    
-    return result;
   }
 }
 
