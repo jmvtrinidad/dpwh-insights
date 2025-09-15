@@ -169,8 +169,8 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
               <TableBody>
                 {[...Array(6)].map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
-                    <TableCell className="p-4">
-                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                    <TableCell className="p-3 md:p-4">
+                      <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-3">
                         <div className="space-y-2">
                           <div className="h-5 bg-muted rounded w-3/4"></div>
                           <div className="h-4 bg-muted rounded w-1/4"></div>
@@ -311,18 +311,18 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
               <TableBody>
                 {currentProjects.map((project) => (
                   <TableRow key={project.contractId} className="hover-elevate" data-testid={`row-project-${project.contractId}`}>
-                    <TableCell className="p-4">
-                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                    <TableCell className="p-3 md:p-4">
+                      <div className="bg-muted/30 rounded-lg p-3 md:p-4 space-y-3">
                         {/* Project Title and Category */}
                         <div>
-                          <h3 className="font-semibold text-base" title={project.contractName}>
+                          <h3 className="font-semibold text-sm md:text-base line-clamp-2 break-words" title={project.contractName}>
                             {project.contractName}
                           </h3>
-                          <p className="text-sm text-muted-foreground">Infrastructure Development</p>
+                          <p className="text-xs md:text-sm text-muted-foreground">Infrastructure Development</p>
                         </div>
 
                         {/* Two-column layout */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4 text-xs md:text-sm">
                           {/* Left Column */}
                           <div className="space-y-2">
                             <div>
@@ -330,14 +330,14 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
                               <div className="mt-1">
                                 <div className="flex flex-wrap gap-1">
                                   {project.municipality && (
-                                    <span>{project.municipality.toUpperCase()}</span>
+                                    <span className="line-clamp-1 break-words">{project.municipality.toUpperCase()}</span>
                                   )}
                                   {project.province && project.municipality && <span>, </span>}
                                   {project.province && (
-                                    <span>{project.province.toUpperCase()}</span>
+                                    <span className="line-clamp-1 break-words">{project.province.toUpperCase()}</span>
                                   )}
                                 </div>
-                                <div className="text-muted-foreground">
+                                <div className="text-muted-foreground line-clamp-1">
                                   {project.region}
                                 </div>
                               </div>
@@ -345,10 +345,10 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
                             <div>
                               <span className="font-medium">Cost:</span>
                               <div className="mt-1">
-                                <span className="font-bold text-lg text-primary">
+                                <span className="font-bold text-base md:text-lg text-primary break-all">
                                   {formatCurrency(project.contractCost)}
                                 </span>
-                                <div className="text-muted-foreground">
+                                <div className="text-muted-foreground mt-1">
                                   {getStatusBadge(project.status, project.accomplishmentInPercentage)}
                                 </div>
                               </div>
@@ -365,7 +365,7 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
                             </div>
                             <div>
                               <span className="font-medium">Contractor:</span>
-                              <div className="mt-1" title={project.contractor}>
+                              <div className="mt-1 line-clamp-2 break-words" title={project.contractor}>
                                 {project.contractor}
                               </div>
                             </div>
