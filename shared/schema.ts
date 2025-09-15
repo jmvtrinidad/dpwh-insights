@@ -1,12 +1,12 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, decimal, real, timestamp, jsonb, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 // Valid status values
 export const PROJECT_STATUS_VALUES = [
   "Completed",
-  "Not Yet Started", 
+  "Not Yet Started",
   "On-Going",
   "Terminated"
 ] as const;
@@ -44,7 +44,7 @@ export const projects = pgTable("projects", {
   contractName: text("contract_name").notNull(),
   contractor: text("contractor").array().notNull(),
   implementingOffice: text("implementing_office").notNull(),
-  contractCost: decimal("contract_cost", { precision: 15, scale: 2 }).notNull(),
+  contractCost: real("contract_cost").notNull(),
   contractEffectivityDate: text("contract_effectivity_date").notNull(),
   contractExpiryDate: text("contract_expiry_date").notNull(),
   status: text("status").notNull(),
@@ -84,9 +84,9 @@ export const insertProjectSchema = createInsertSchema(projects).extend({
   contractCost: z.union([z.number(), z.string()])
     .transform(val => {
       const num = typeof val === 'string' ? parseFloat(val) : val;
-      return num.toString();
+      return isNaN(num) ? 0 : num;
     })
-    .pipe(z.string()),
+    .pipe(z.number()),
   // Handle float to integer for accomplishment percentage
   accomplishmentInPercentage: z.union([z.number(), z.string()])
     .transform(val => {

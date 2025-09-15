@@ -12,7 +12,7 @@ export interface IStorage {
   upsertUser(user: UpsertUser): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: UpsertUser): Promise<User>;
-  
+
   // Project operations
   getProject(contractId: string): Promise<Project | undefined>;
   getAllProjects(): Promise<Project[]>;
@@ -44,7 +44,7 @@ export class MemStorage implements IStorage {
   async upsertUser(userData: UpsertUser): Promise<User> {
     const now = new Date();
     const existingUser = this.users.get(userData.id!);
-    
+
     const user: User = {
       ...userData,
       id: userData.id!,
@@ -55,7 +55,7 @@ export class MemStorage implements IStorage {
       createdAt: existingUser?.createdAt || now,
       updatedAt: now,
     };
-    
+
     this.users.set(user.id, user);
     return user;
   }
@@ -170,7 +170,7 @@ export class DbStorage implements IStorage {
         }
       })
       .returning();
-    
+
     return result[0];
   }
 
@@ -211,10 +211,20 @@ export class DbStorage implements IStorage {
   async createProject(insertProject: InsertProject): Promise<Project> {
     console.log('DbStorage.createProject called with:', insertProject.contractId);
     const projectToInsert = {
-      ...insertProject,
+      contractId: insertProject.contractId,
+      contractName: insertProject.contractName,
+      contractor: insertProject.contractor,
+      implementingOffice: insertProject.implementingOffice,
+      contractCost: insertProject.contractCost,
+      contractEffectivityDate: insertProject.contractEffectivityDate,
+      contractExpiryDate: insertProject.contractExpiryDate,
+      status: insertProject.status,
+      accomplishmentInPercentage: insertProject.accomplishmentInPercentage,
+      region: insertProject.region,
       sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
       sourceOfFundsYear: insertProject.sourceOfFundsYear || "",
       sourceOfFundsSource: insertProject.sourceOfFundsSource || "",
+      year: insertProject.year,
       province: insertProject.province || "",
       municipality: insertProject.municipality || "",
       barangay: insertProject.barangay || "",
@@ -228,7 +238,7 @@ export class DbStorage implements IStorage {
           set: projectToInsert
         })
         .returning();
-      
+
       console.log('DbStorage.createProject result:', result[0]?.contractId);
       return result[0];
     } catch (error) {
@@ -242,7 +252,7 @@ export class DbStorage implements IStorage {
       .set(updateProject)
       .where(eq(projects.contractId, contractId))
       .returning();
-    
+
     return result[0];
   }
 
@@ -250,7 +260,7 @@ export class DbStorage implements IStorage {
     const result = await db.delete(projects)
       .where(eq(projects.contractId, contractId))
       .returning();
-    
+
     return result.length > 0;
   }
 
@@ -272,13 +282,13 @@ export class DbStorage implements IStorage {
 
     // Use upsert approach for batch insertion
     const result = [];
-    
+
     try {
       // Process in batches to avoid potential query size limits
       const batchSize = 100;
       for (let i = 0; i < projectsToInsert.length; i += batchSize) {
         const batch = projectsToInsert.slice(i, i + batchSize);
-        
+
         for (const project of batch) {
           const insertResult = await db.insert(projects)
             .values(project)
@@ -287,13 +297,13 @@ export class DbStorage implements IStorage {
               set: project
             })
             .returning();
-          
+
           if (insertResult[0]) {
             result.push(insertResult[0]);
           }
         }
       }
-      
+
       console.log('DbStorage.createManyProjects successfully saved', result.length, 'projects');
       return result;
     } catch (error) {
