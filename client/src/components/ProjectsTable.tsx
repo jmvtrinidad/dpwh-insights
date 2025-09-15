@@ -15,7 +15,9 @@ import {
   ArrowDown,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  Play,
+  XCircle
 } from "lucide-react";
 
 interface Project {
@@ -96,16 +98,30 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
     switch (status.toLowerCase()) {
       case 'completed':
         return (
-          <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800">
             <CheckCircle className="h-3 w-3 mr-1" />
             Completed
           </Badge>
         );
       case 'on-going':
         return (
-          <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
+          <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800">
             <Clock className="h-3 w-3 mr-1" />
             On-going ({accomplishment}%)
+          </Badge>
+        );
+      case 'not yet started':
+        return (
+          <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">
+            <Play className="h-3 w-3 mr-1" />
+            Not Yet Started
+          </Badge>
+        );
+      case 'terminated':
+        return (
+          <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800">
+            <XCircle className="h-3 w-3 mr-1" />
+            Terminated
           </Badge>
         );
       default:
