@@ -3,12 +3,14 @@ import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import FilterSidebar from "./FilterSidebar";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import ProjectsTable from "./ProjectsTable";
 import AdminLogin from "./AdminLogin";
 import ThemeToggle from "./ThemeToggle";
-import { BarChart3, Table, Settings, Filter, X } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { BarChart3, Table, Settings, Filter, X, Menu } from "lucide-react";
 import { 
   FilterState, 
   DEFAULT_FILTER_STATE, 
@@ -63,13 +65,22 @@ export default function DashboardLayout({
 }: DashboardLayoutProps) {
   const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("analytics");
+  const isMobile = useIsMobile();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileFiltersOpen, setIsMobileFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isUpdatingFromUrl, setIsUpdatingFromUrl] = useState(false);
   
   // Track previous location search to detect URL changes
   const prevLocationSearchRef = useRef<string>('');
+  
+  // Initialize sidebar state based on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setIsSidebarCollapsed(true);
+    }
+  }, [isMobile]);
   
   // Single useEffect to handle initialization from URL
   useEffect(() => {
@@ -205,30 +216,73 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-background">
-      {/* Filter Sidebar */}
-      <FilterSidebar
-        filters={filters}
-        options={filterOptions}
-        onFilterChange={handleFilterChange}
-        onClearFilters={handleClearFilters}
-        activeFiltersCount={activeFiltersCount}
-        isCollapsed={isSidebarCollapsed}
-        onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-      />
+      {/* Mobile Filter Sheet */}
+      {isMobile && (
+        <Sheet open={isMobileFiltersOpen} onOpenChange={setIsMobileFiltersOpen}>
+          <SheetContent side="left" className="w-80 p-0">
+            <FilterSidebar
+              filters={filters}
+              options={filterOptions}
+              onFilterChange={(key, value) => {
+                handleFilterChange(key, value);
+                if (key !== 'search') {
+                  setIsMobileFiltersOpen(false);
+                }
+              }}
+              onClearFilters={() => {
+                handleClearFilters();
+                setIsMobileFiltersOpen(false);
+              }}
+              activeFiltersCount={activeFiltersCount}
+              isCollapsed={false}
+              onToggle={() => {}}
+            />
+          </SheetContent>
+        </Sheet>
+      )}
+
+      {/* Desktop Filter Sidebar */}
+      {!isMobile && (
+        <FilterSidebar
+          filters={filters}
+          options={filterOptions}
+          onFilterChange={handleFilterChange}
+          onClearFilters={handleClearFilters}
+          activeFiltersCount={activeFiltersCount}
+          isCollapsed={isSidebarCollapsed}
+          onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+      )}
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="border-b bg-card border-card-border">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-4">
+        <header className="sticky top-0 z-50 border-b bg-card border-card-border">
+          <div className="flex items-center justify-between p-3 md:p-4">
+            <div className="flex items-center gap-2 md:gap-4">
+              {/* Mobile Filters Button */}
+              {isMobile && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMobileFiltersOpen(true)}
+                  data-testid="button-filters-open"
+                  className="md:hidden"
+                >
+                  <Menu className="h-5 w-5" />
+                </Button>
+              )}
+              
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
-                  <BarChart3 className="h-5 w-5 text-primary-foreground" />
+                <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-md flex items-center justify-center">
+                  <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-card-foreground">DPWH Analytics Dashboard</h1>
-                  <p className="text-sm text-muted-foreground">Department of Public Works and Highways</p>
+                <div className="hidden sm:block">
+                  <h1 className="text-lg md:text-xl font-semibold text-card-foreground">DPWH Analytics Dashboard</h1>
+                  <p className="text-xs md:text-sm text-muted-foreground">Department of Public Works and Highways</p>
+                </div>
+                <div className="sm:hidden">
+                  <h1 className="text-lg font-semibold text-card-foreground">DPWH</h1>
                 </div>
               </div>
               
@@ -249,9 +303,10 @@ export default function DashboardLayout({
               )}
             </div>
 
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" data-testid="badge-project-count">
-                {filteredProjects.length} of {projects.length} projects
+            <div className="flex items-center gap-1 md:gap-2">
+              <Badge variant="outline" data-testid="badge-project-count" className="text-xs md:text-sm">
+                <span className="hidden sm:inline">{filteredProjects.length} of {projects.length} projects</span>
+                <span className="sm:hidden">{filteredProjects.length}/{projects.length}</span>
               </Badge>
               <ThemeToggle />
             </div>
@@ -262,29 +317,31 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-hidden">
           <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <div className="border-b border-border">
-              <TabsList className="inline-flex h-12 items-center justify-center rounded-none bg-transparent p-1 text-muted-foreground mx-4 mt-2">
+              <TabsList className="inline-flex h-10 md:h-12 items-center justify-start md:justify-center rounded-none bg-transparent p-1 text-muted-foreground overflow-x-auto whitespace-nowrap -mx-2 px-4 md:mx-4 md:mt-2">
                 <TabsTrigger 
                   value="analytics" 
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   data-testid="tab-analytics"
                 >
-                  <BarChart3 className="h-4 w-4 mr-2" />
-                  Analytics
+                  <BarChart3 className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Analytics</span>
+                  <span className="sm:hidden">Charts</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="table" 
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   data-testid="tab-table"
                 >
-                  <Table className="h-4 w-4 mr-2" />
-                  Data Table
+                  <Table className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
+                  <span className="hidden sm:inline">Data Table</span>
+                  <span className="sm:hidden">Table</span>
                 </TabsTrigger>
                 <TabsTrigger 
                   value="admin" 
-                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   data-testid="tab-admin"
                 >
-                  <Settings className="h-4 w-4 mr-2" />
+                  <Settings className="h-3 w-3 md:h-4 md:w-4 mr-1 md:mr-2" />
                   Admin
                 </TabsTrigger>
               </TabsList>
@@ -295,11 +352,11 @@ export default function DashboardLayout({
                 <AnalyticsDashboard projects={filteredProjects} isLoading={isLoading} onFilterChange={handleFilterChange} />
               </TabsContent>
 
-              <TabsContent value="table" className="h-full m-0 p-6">
+              <TabsContent value="table" className="h-full m-0 p-3 md:p-6">
                 <ProjectsTable projects={filteredProjects} isLoading={isLoading} />
               </TabsContent>
 
-              <TabsContent value="admin" className="h-full m-0 p-6">
+              <TabsContent value="admin" className="h-full m-0 p-3 md:p-6">
                 <div className="max-w-2xl mx-auto">
                   <AdminLogin
                     isAuthenticated={isAuthenticated}
