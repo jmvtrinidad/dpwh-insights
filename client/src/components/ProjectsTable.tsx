@@ -15,7 +15,10 @@ import {
   ArrowDown,
   CheckCircle,
   Clock,
-  FileText
+  FileText,
+  MapPin,
+  Eye,
+  Star
 } from "lucide-react";
 
 interface Project {
@@ -163,31 +166,38 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32"><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-32 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-16 animate-pulse"></div></TableHead>
-                  <TableHead className="text-right"><div className="h-4 bg-muted rounded w-20 animate-pulse ml-auto"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-24 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-28 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-16 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableHead>
-                  <TableHead><div className="h-4 bg-muted rounded w-20 animate-pulse"></div></TableHead>
+                  <TableHead className="w-full"><div className="h-4 bg-muted rounded w-20 animate-pulse">Projects</div></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {[...Array(6)].map((_, i) => (
                   <TableRow key={i} className="animate-pulse">
-                    <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-full"></div></TableCell>
-                    <TableCell><div className="h-6 bg-muted rounded w-16"></div></TableCell>
-                    <TableCell className="text-right"><div className="h-4 bg-muted rounded w-20 ml-auto"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-24"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-28"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-16"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
-                    <TableCell><div className="h-4 bg-muted rounded w-20"></div></TableCell>
+                    <TableCell className="p-4">
+                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                        <div className="space-y-2">
+                          <div className="h-5 bg-muted rounded w-3/4"></div>
+                          <div className="h-4 bg-muted rounded w-1/4"></div>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-3">
+                            <div className="h-4 bg-muted rounded w-full"></div>
+                            <div className="h-4 bg-muted rounded w-2/3"></div>
+                          </div>
+                          <div className="space-y-3">
+                            <div className="h-4 bg-muted rounded w-full"></div>
+                            <div className="h-4 bg-muted rounded w-3/4"></div>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center pt-2">
+                          <div className="h-4 bg-muted rounded w-32"></div>
+                          <div className="flex gap-2">
+                            <div className="h-8 bg-muted rounded w-20"></div>
+                            <div className="h-8 bg-muted rounded w-8"></div>
+                            <div className="h-8 bg-muted rounded w-8"></div>
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -212,8 +222,70 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Page Size Control */}
-        <div className="flex justify-end">
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Sorting Controls */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-muted-foreground mr-2">Sort by:</span>
+            <Button
+              variant={sortField === 'contractName' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('contractName')}
+              data-testid="sort-contractName"
+            >
+              Project Name
+              {sortField === 'contractName' && (
+                sortDirection === 'asc' ? 
+                  <ArrowUp className="ml-1 h-3 w-3" /> : 
+                  <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+              {sortField !== 'contractName' && <ArrowUpDown className="ml-1 h-3 w-3" />}
+            </Button>
+            <Button
+              variant={sortField === 'contractCost' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('contractCost')}
+              data-testid="sort-contractCost"
+            >
+              Cost
+              {sortField === 'contractCost' && (
+                sortDirection === 'asc' ? 
+                  <ArrowUp className="ml-1 h-3 w-3" /> : 
+                  <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+              {sortField !== 'contractCost' && <ArrowUpDown className="ml-1 h-3 w-3" />}
+            </Button>
+            <Button
+              variant={sortField === 'year' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('year')}
+              data-testid="sort-year"
+            >
+              Year
+              {sortField === 'year' && (
+                sortDirection === 'asc' ? 
+                  <ArrowUp className="ml-1 h-3 w-3" /> : 
+                  <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+              {sortField !== 'year' && <ArrowUpDown className="ml-1 h-3 w-3" />}
+            </Button>
+            <Button
+              variant={sortField === 'status' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('status')}
+              data-testid="sort-status"
+            >
+              Status
+              {sortField === 'status' && (
+                sortDirection === 'asc' ? 
+                  <ArrowUp className="ml-1 h-3 w-3" /> : 
+                  <ArrowDown className="ml-1 h-3 w-3" />
+              )}
+              {sortField !== 'status' && <ArrowUpDown className="ml-1 h-3 w-3" />}
+            </Button>
+          </div>
+          
+          {/* Page Size Control */}
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => {
@@ -225,10 +297,10 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="10">10 rows</SelectItem>
-              <SelectItem value="25">25 rows</SelectItem>
-              <SelectItem value="50">50 rows</SelectItem>
-              <SelectItem value="100">100 rows</SelectItem>
+              <SelectItem value="10">10 projects</SelectItem>
+              <SelectItem value="25">25 projects</SelectItem>
+              <SelectItem value="50">50 projects</SelectItem>
+              <SelectItem value="100">100 projects</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -244,167 +316,92 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32">
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('contractId')}
-                      data-testid="sort-contractId"
-                    >
-                      Contract ID
-                      {sortField === 'contractId' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'contractId' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('contractName')}
-                      data-testid="sort-contractName"
-                    >
-                      Project Name
-                      {sortField === 'contractName' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'contractName' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('status')}
-                      data-testid="sort-status"
-                    >
-                      Status
-                      {sortField === 'status' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'status' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead className="text-right">
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('contractCost')}
-                      data-testid="sort-contractCost"
-                    >
-                      Cost
-                      {sortField === 'contractCost' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'contractCost' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('contractor')}
-                      data-testid="sort-contractor"
-                    >
-                      Contractor
-                      {sortField === 'contractor' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'contractor' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead>Implementing Office</TableHead>
-                  <TableHead>Location</TableHead>
-                  <TableHead>
-                    <Button 
-                      variant="ghost" 
-                      className="h-auto p-0 hover:bg-transparent" 
-                      onClick={() => handleSort('year')}
-                      data-testid="sort-year"
-                    >
-                      Year
-                      {sortField === 'year' && (
-                        sortDirection === 'asc' ? 
-                          <ArrowUp className="ml-1 h-3 w-3" /> : 
-                          <ArrowDown className="ml-1 h-3 w-3" />
-                      )}
-                      {sortField !== 'year' && <ArrowUpDown className="ml-1 h-3 w-3 opacity-50" />}
-                    </Button>
-                  </TableHead>
-                  <TableHead>Start Date</TableHead>
-                  <TableHead>End Date</TableHead>
+                  <TableHead className="w-full">Projects</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentProjects.map((project) => (
                   <TableRow key={project.contractId} className="hover-elevate" data-testid={`row-project-${project.contractId}`}>
-                    <TableCell className="font-mono text-sm">
-                      {project.contractId}
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium" title={project.contractName}>
-                        {project.contractName}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(project.status, project.accomplishmentInPercentage)}
-                    </TableCell>
-                    <TableCell className="text-right font-mono font-semibold text-primary">
-                      {formatCurrency(project.contractCost)}
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-48 truncate" title={project.contractor}>
-                        {project.contractor}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="max-w-48 truncate" title={project.implementingOffice}>
-                        {project.implementingOffice}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        <Badge variant="outline" className="text-xs">
-                          {project.region}
-                        </Badge>
-                        {project.province && (
-                          <Badge variant="outline" className="text-xs">
-                            {project.province}
-                          </Badge>
-                        )}
-                        {project.municipality && (
-                          <Badge variant="outline" className="text-xs">
-                            {project.municipality}
-                          </Badge>
-                        )}
-                      </div>
-                      {project.barangay && (
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Brgy. {project.barangay}
+                    <TableCell className="p-4">
+                      <div className="bg-muted/30 rounded-lg p-4 space-y-3">
+                        {/* Project Title and Category */}
+                        <div>
+                          <h3 className="font-semibold text-base" title={project.contractName}>
+                            {project.contractName}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">Infrastructure Development</p>
                         </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="secondary" className="text-xs">
-                        {project.year}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDate(project.contractEffectivityDate)}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {formatDate(project.contractExpiryDate)}
+
+                        {/* Two-column layout */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                          {/* Left Column */}
+                          <div className="space-y-2">
+                            <div>
+                              <span className="font-medium">Location:</span>
+                              <div className="mt-1">
+                                <div className="flex flex-wrap gap-1">
+                                  {project.municipality && (
+                                    <span>{project.municipality.toUpperCase()}</span>
+                                  )}
+                                  {project.province && project.municipality && <span>, </span>}
+                                  {project.province && (
+                                    <span>{project.province.toUpperCase()}</span>
+                                  )}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {project.region}
+                                </div>
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Cost:</span>
+                              <div className="mt-1">
+                                <span className="font-bold text-lg text-primary">
+                                  {formatCurrency(project.contractCost)}
+                                </span>
+                                <div className="text-muted-foreground">
+                                  {getStatusBadge(project.status, project.accomplishmentInPercentage)}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Right Column */}
+                          <div className="space-y-2">
+                            <div>
+                              <span className="font-medium">Fiscal Year:</span>
+                              <div className="mt-1">
+                                FY {project.year}
+                              </div>
+                            </div>
+                            <div>
+                              <span className="font-medium">Contractor:</span>
+                              <div className="mt-1" title={project.contractor}>
+                                {project.contractor}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Community Rating and Actions */}
+                        <div className="flex items-center justify-between pt-2 border-t border-border">
+                          <div className="text-sm text-muted-foreground">
+                            Community Rating: No ratings
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button size="sm" variant="outline" data-testid={`button-rate-${project.contractId}`}>
+                              <Star className="h-3 w-3 mr-1" />
+                              Rate Project
+                            </Button>
+                            <Button size="sm" variant="outline" data-testid={`button-view-${project.contractId}`}>
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                            <Button size="sm" variant="outline" data-testid={`button-location-${project.contractId}`}>
+                              <MapPin className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
