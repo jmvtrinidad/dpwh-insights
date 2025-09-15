@@ -6,7 +6,7 @@ import { TrendingUp, Building, Users, Calendar, MapPin, CheckCircle, Clock, Aler
 interface Project {
   contractId: string;
   contractName: string;
-  contractor: string;
+  contractor: string[];
   implementingOffice: string;
   contractCost: number;
   contractEffectivityDate: string;
@@ -61,21 +61,33 @@ export default function AnalyticsDashboard({ projects, isLoading = false, onFilt
 
   // Calculate key metrics
   const totalProjects = projects.length;
-  const completedProjects = projects.filter(p => p.status === 'Completed').length;
-  const ongoingProjects = projects.filter(p => p.status === 'On-going').length;
+  const completedProjects = projects.filter(p => p.status.toLowerCase() === 'completed').length;
+  const ongoingProjects = projects.filter(p => p.status.toLowerCase() === 'on-going').length;
   const totalBudget = projects.reduce((sum, p) => sum + p.contractCost, 0);
   const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
 
   // Chart data preparation
   const getChartData = (groupBy: keyof Project, label: string) => {
     const grouped = projects.reduce((acc, project) => {
-      const key = project[groupBy] as string;
-      if (!acc[key]) {
-        acc[key] = { name: key, count: 0, completed: 0, ongoing: 0 };
+      // Handle contractor array specially by flattening
+      if (groupBy === 'contractor') {
+        project.contractor.forEach(contractor => {
+          if (!acc[contractor]) {
+            acc[contractor] = { name: contractor, count: 0, completed: 0, ongoing: 0 };
+          }
+          acc[contractor].count++;
+          if (project.status.toLowerCase() === 'completed') acc[contractor].completed++;
+          if (project.status.toLowerCase() === 'on-going') acc[contractor].ongoing++;
+        });
+      } else {
+        const key = project[groupBy] as string;
+        if (!acc[key]) {
+          acc[key] = { name: key, count: 0, completed: 0, ongoing: 0 };
+        }
+        acc[key].count++;
+        if (project.status.toLowerCase() === 'completed') acc[key].completed++;
+        if (project.status.toLowerCase() === 'on-going') acc[key].ongoing++;
       }
-      acc[key].count++;
-      if (project.status === 'Completed') acc[key].completed++;
-      if (project.status === 'On-going') acc[key].ongoing++;
       return acc;
     }, {} as Record<string, { name: string; count: number; completed: number; ongoing: number }>);
 

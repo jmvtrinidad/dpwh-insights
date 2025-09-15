@@ -23,7 +23,7 @@ import {
 interface Project {
   contractId: string;
   contractName: string;
-  contractor: string;
+  contractor: string[];
   implementingOffice: string;
   contractCost: number;
   contractEffectivityDate: string;
@@ -380,9 +380,13 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
                               </div>
                             </div>
                             <div>
-                              <span className="font-medium">Contractor:</span>
-                              <div className="mt-1 line-clamp-2 break-words" title={project.contractor}>
-                                {project.contractor}
+                              <span className="font-medium">Contractor{project.contractor.length > 1 ? 's' : ''}:</span>
+                              <div className="mt-1 space-y-1">
+                                {project.contractor.map((contractor, index) => (
+                                  <div key={index} className="text-xs bg-muted/50 rounded px-2 py-1 line-clamp-1" title={contractor}>
+                                    {contractor}
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           </div>

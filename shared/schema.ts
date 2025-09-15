@@ -42,7 +42,7 @@ export type User = typeof users.$inferSelect;
 export const projects = pgTable("projects", {
   contractId: varchar("contract_id").primaryKey(),
   contractName: text("contract_name").notNull(),
-  contractor: text("contractor").notNull(),
+  contractor: text("contractor").array().notNull(),
   implementingOffice: text("implementing_office").notNull(),
   contractCost: integer("contract_cost").notNull(),
   contractEffectivityDate: text("contract_effectivity_date").notNull(),
@@ -70,6 +70,12 @@ export const insertProjectSchema = createInsertSchema(projects).extend({
       return found || normalizedVal;
     })
     .pipe(z.enum(PROJECT_STATUS_VALUES)),
+  // Handle single contractor or array of contractors
+  contractor: z.union([z.string(), z.array(z.string())])
+    .transform(val => {
+      // Convert single string to array, keep arrays as arrays
+      return Array.isArray(val) ? val : [val];
+    }),
   // Handle null values for location fields
   province: z.union([z.string(), z.null()]).transform(val => val || ""),
   municipality: z.union([z.string(), z.null()]).transform(val => val || ""),

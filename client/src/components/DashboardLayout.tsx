@@ -24,7 +24,7 @@ import {
 interface Project {
   contractId: string;
   contractName: string;
-  contractor: string;
+  contractor: string[];
   implementingOffice: string;
   contractCost: number;
   contractEffectivityDate: string;
@@ -125,6 +125,11 @@ export default function DashboardLayout({
 
   // Generate filter options from projects data
   const getUniqueValues = (field: keyof Project): string[] => {
+    if (field === 'contractor') {
+      // Handle contractor arrays by flattening all contractors
+      const allContractors = projects.flatMap(project => project.contractor).filter(Boolean);
+      return Array.from(new Set(allContractors)).sort();
+    }
     const values = projects.map(project => project[field] as string).filter(Boolean);
     return Array.from(new Set(values)).sort();
   };
@@ -147,7 +152,7 @@ export default function DashboardLayout({
       const searchTerm = filters.search.toLowerCase();
       const searchableFields = [
         project.contractName?.toLowerCase() || '',
-        project.contractor?.toLowerCase() || '',
+        ...project.contractor.map(c => c.toLowerCase()),
         project.implementingOffice?.toLowerCase() || ''
       ];
       
@@ -162,6 +167,12 @@ export default function DashboardLayout({
     return Object.entries(filters).every(([key, value]) => {
       if (key === 'search') return true; // Already handled above
       if (!value || value === '__all__') return true;
+      
+      // Handle contractor filter specially since it's an array
+      if (key === 'contractor') {
+        return project.contractor.includes(value);
+      }
+      
       return project[key as keyof Project] === value;
     });
   });
