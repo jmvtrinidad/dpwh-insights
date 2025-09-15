@@ -3,6 +3,16 @@ import { pgTable, text, varchar, integer, timestamp, jsonb, index } from "drizzl
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Valid status values
+export const PROJECT_STATUS_VALUES = [
+  "Completed",
+  "Not Yet Started", 
+  "On-Going",
+  "Terminated"
+] as const;
+
+export type ProjectStatus = typeof PROJECT_STATUS_VALUES[number];
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -49,7 +59,9 @@ export const projects = pgTable("projects", {
   barangay: text("barangay").notNull().default(""),
 });
 
-export const insertProjectSchema = createInsertSchema(projects);
+export const insertProjectSchema = createInsertSchema(projects).extend({
+  status: z.enum(PROJECT_STATUS_VALUES)
+});
 export const updateProjectSchema = insertProjectSchema.partial();
 
 export type InsertProject = z.infer<typeof insertProjectSchema>;
