@@ -1,7 +1,11 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TrendingUp, Building, Users, Calendar, MapPin, CheckCircle, Clock, AlertCircle, BarChart3 } from 'lucide-react';
+import { TrendingUp, Building, Users, Calendar, MapPin, CheckCircle, Clock, AlertCircle, BarChart3, HardHat, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Project {
   contractId: string;
@@ -26,10 +30,24 @@ interface Project {
 interface AnalyticsDashboardProps {
   projects: Project[];
   isLoading?: boolean;
-  onFilterChange?: (key: 'region'|'implementingOffice'|'province'|'municipality'|'barangay'|'status'|'year', value: string) => void;
+  onFilterChange?: (key: 'region'|'implementingOffice'|'contractor'|'province'|'municipality'|'barangay'|'status'|'year', value: string) => void;
+}
+
+type ContractorSortType = 'mostProjects' | 'fewestProjects' | 'highestCost' | 'lowestCost';
+
+interface ContractorData {
+  name: string;
+  projectCount: number;
+  totalCost: number;
+  completed: number;
+  ongoing: number;
 }
 
 export default function AnalyticsDashboard({ projects, isLoading = false, onFilterChange }: AnalyticsDashboardProps) {
+  const [contractorSortBy, setContractorSortBy] = useState<ContractorSortType>('mostProjects');
+  const [contractorPage, setContractorPage] = useState(1);
+  const contractorsPerPage = 10;
+
   if (isLoading) {
     return (
       <div className="p-6 space-y-6">
@@ -65,6 +83,95 @@ export default function AnalyticsDashboard({ projects, isLoading = false, onFilt
   const ongoingProjects = projects.filter(p => p.status.toLowerCase() === 'on-going').length;
   const totalBudget = projects.reduce((sum, p) => sum + p.contractCost, 0);
   const completionRate = totalProjects > 0 ? Math.round((completedProjects / totalProjects) * 100) : 0;
+
+  // Process contractor data with project count and total cost
+  const getContractorData = (): ContractorData[] => {
+    const contractorMap = new Map<string, ContractorData>();
+    
+    projects.forEach(project => {
+      project.contractor.forEach(contractorName => {
+        if (!contractorMap.has(contractorName)) {
+          contractorMap.set(contractorName, {
+            name: contractorName,
+            projectCount: 0,
+            totalCost: 0,
+            completed: 0,
+            ongoing: 0
+          });
+        }
+        
+        const contractor = contractorMap.get(contractorName)!;
+        contractor.projectCount++;
+        contractor.totalCost += project.contractCost;
+        
+        if (project.status.toLowerCase() === 'completed') {
+          contractor.completed++;
+        } else if (project.status.toLowerCase() === 'on-going') {
+          contractor.ongoing++;
+        }
+      });
+    });
+    
+    return Array.from(contractorMap.values());
+  };
+
+  const contractorData = getContractorData();
+
+  // Sort contractor data based on selected sort type
+  const sortedContractorData = [...contractorData].sort((a, b) => {
+    switch (contractorSortBy) {
+      case 'mostProjects':
+        return b.projectCount - a.projectCount;
+      case 'fewestProjects':
+        return a.projectCount - b.projectCount;
+      case 'highestCost':
+        return b.totalCost - a.totalCost;
+      case 'lowestCost':
+        return a.totalCost - b.totalCost;
+      default:
+        return b.projectCount - a.projectCount;
+    }
+  });
+
+  // Paginate contractor data
+  const totalContractorPages = Math.ceil(sortedContractorData.length / contractorsPerPage);
+  const startContractorIndex = (contractorPage - 1) * contractorsPerPage;
+  const endContractorIndex = startContractorIndex + contractorsPerPage;
+  const currentContractorData = sortedContractorData.slice(startContractorIndex, endContractorIndex);
+
+  // Prepare chart data based on sort type
+  const getContractorChartData = () => {
+    const topContractors = sortedContractorData.slice(0, 10); // Top 10 for chart
+    
+    return topContractors.map(contractor => ({
+      name: contractor.name.length > 20 ? contractor.name.substring(0, 20) + '...' : contractor.name,
+      fullName: contractor.name,
+      value: contractorSortBy.includes('Cost') ? contractor.totalCost / 1000000 : contractor.projectCount,
+      projectCount: contractor.projectCount,
+      totalCost: contractor.totalCost
+    }));
+  };
+
+  const contractorChartData = getContractorChartData();
+
+  // Custom tooltip for contractor chart
+  const ContractorTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload;
+      return (
+        <div className="bg-card border border-card-border rounded-md p-3 shadow-md max-w-xs">
+          <p className="font-medium text-card-foreground text-sm">{data.fullName}</p>
+          <p className="text-sm text-muted-foreground">
+            Projects: {data.projectCount}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Total Cost: ₱{(data.totalCost / 1000000).toFixed(1)}M
+          </p>
+        </div>
+      );
+    }
+    return null;
+  };
 
   // Chart data preparation
   const getChartData = (groupBy: keyof Project, label: string) => {
@@ -123,6 +230,20 @@ export default function AnalyticsDashboard({ projects, isLoading = false, onFilt
       );
     }
     return null;
+  };
+
+  const getSortLabel = (sortType: ContractorSortType) => {
+    switch (sortType) {
+      case 'mostProjects': return 'Most Projects';
+      case 'fewestProjects': return 'Fewest Projects';
+      case 'highestCost': return 'Highest Cost';
+      case 'lowestCost': return 'Lowest Cost';
+      default: return 'Most Projects';
+    }
+  };
+
+  const getChartYAxisLabel = () => {
+    return contractorSortBy.includes('Cost') ? 'Cost (Millions ₱)' : 'Number of Projects';
   };
 
   return (
@@ -460,6 +581,184 @@ export default function AnalyticsDashboard({ projects, isLoading = false, onFilt
           </Card>
         </div>
       </div>
+      {/* Contractor Analytics Section */}
+      <div className="space-y-6">
+        <h2 data-testid="header-contractor-analytics" className="text-xl font-semibold text-foreground flex items-center gap-2">
+          <HardHat className="h-6 w-6 text-primary" />
+          Contractor Analytics
+        </h2>
+        
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {/* Contractor Table */}
+          <Card data-testid="contractor-table-card" className="hover-elevate">
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <CardTitle className="flex items-center gap-2">
+                  <HardHat className="h-5 w-5 text-primary" />
+                  Top Contractors
+                </CardTitle>
+                <Select value={contractorSortBy} onValueChange={(value: ContractorSortType) => {
+                  setContractorSortBy(value);
+                  setContractorPage(1);
+                }} data-testid="select-contractor-sort">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Sort by" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mostProjects">Most Projects</SelectItem>
+                    <SelectItem value="fewestProjects">Fewest Projects</SelectItem>
+                    <SelectItem value="highestCost">Highest Cost</SelectItem>
+                    <SelectItem value="lowestCost">Lowest Cost</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-8">#</TableHead>
+                        <TableHead>Contractor Name</TableHead>
+                        <TableHead className="text-right">Projects</TableHead>
+                        <TableHead className="text-right">Total Cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentContractorData.map((contractor, index) => (
+                        <TableRow key={contractor.name} data-testid={`row-contractor-${contractor.name.replace(/\s+/g, '-').toLowerCase()}`}>
+                          <TableCell className="font-medium">
+                            {startContractorIndex + index + 1}
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            <div className="max-w-[200px]">
+                              <div className="truncate" title={contractor.name}>
+                                {contractor.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {contractor.completed} completed, {contractor.ongoing} ongoing
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-medium" data-testid={`text-projects-${contractor.name.replace(/\s+/g, '-').toLowerCase()}`}>
+                            {contractor.projectCount}
+                          </TableCell>
+                          <TableCell className="text-right font-medium" data-testid={`text-cost-${contractor.name.replace(/\s+/g, '-').toLowerCase()}`}>
+                            ₱{(contractor.totalCost / 1000000).toFixed(1)}M
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                
+                {/* Pagination */}
+                {totalContractorPages > 1 && (
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                      Showing {startContractorIndex + 1} to {Math.min(endContractorIndex, sortedContractorData.length)} of {sortedContractorData.length} contractors
+                    </p>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setContractorPage(prev => Math.max(prev - 1, 1))}
+                        disabled={contractorPage === 1}
+                        data-testid="button-contractor-prev"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        Previous
+                      </Button>
+                      <div className="flex items-center space-x-1">
+                        {Array.from({ length: Math.min(5, totalContractorPages) }, (_, i) => {
+                          const pageNum = contractorPage <= 3 ? i + 1 : 
+                                         contractorPage >= totalContractorPages - 2 ? totalContractorPages - 4 + i :
+                                         contractorPage - 2 + i;
+                          return (
+                            <Button
+                              key={pageNum}
+                              variant={contractorPage === pageNum ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setContractorPage(pageNum)}
+                              className="w-8 h-8 p-0"
+                              data-testid={`button-contractor-page-${pageNum}`}
+                            >
+                              {pageNum}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setContractorPage(prev => Math.min(prev + 1, totalContractorPages))}
+                        disabled={contractorPage === totalContractorPages}
+                        data-testid="button-contractor-next"
+                      >
+                        Next
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contractor Chart */}
+          <Card data-testid="contractor-chart-card" className="hover-elevate">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                {getSortLabel(contractorSortBy)} - Chart
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Top 10 contractors by {getSortLabel(contractorSortBy).toLowerCase()}
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={contractorChartData} margin={{ top: 20, right: 30, left: 20, bottom: 100 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis 
+                    dataKey="name" 
+                    tick={{ fontSize: 10 }}
+                    angle={-45}
+                    textAnchor="end"
+                    height={100}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    label={{ 
+                      value: getChartYAxisLabel(), 
+                      angle: -90, 
+                      position: 'insideLeft',
+                      style: { textAnchor: 'middle', fontSize: '12px' }
+                    }}
+                  />
+                  <Tooltip content={<ContractorTooltip />} />
+                  <Bar 
+                    dataKey="value" 
+                    fill={chartColors.primary} 
+                    radius={[4, 4, 0, 0]} 
+                    cursor="pointer"
+                  >
+                    {contractorChartData.map((entry, index) => (
+                      <Cell 
+                        key={`contractor-chart-cell-${index}`}
+                        data-testid={`bar-contractor-${entry.name.replace(/\s+/g, '-').toLowerCase()}`}
+                        className="hover:opacity-80"
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
     </div>
   );
 }
