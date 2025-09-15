@@ -31,6 +31,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     next();
   };
+
+  // Admin authorization middleware
+  const AUTHORIZED_ADMIN_EMAILS = [
+    'jmvtrinidad16@gmail.com',
+    'janmvtrinidad@gmail.com'
+  ];
+
+  const isAuthorizedAdmin = async (req: any, res: any, next: any) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ error: 'Not authenticated' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user || !user.email) {
+        return res.status(403).json({ error: 'User not found or email not available' });
+      }
+
+      if (!AUTHORIZED_ADMIN_EMAILS.includes(user.email)) {
+        return res.status(403).json({ error: 'Admin access denied. Only authorized administrators can perform this action.' });
+      }
+
+      next();
+    } catch (error) {
+      console.error('Admin authorization error:', error);
+      res.status(500).json({ error: 'Authorization check failed' });
+    }
+  };
   
   // Configure multer for file uploads
   const upload = multer({ 
@@ -129,8 +158,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Upload projects from JSON file (protected with CSRF)
-  app.post("/api/projects/upload", isAuthenticated, csrfProtection, upload.single('file'), async (req, res) => {
+  // Check if user is authorized admin
+  app.get('/api/auth/admin-status', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.json({ isAdmin: false });
+      }
+
+      const user = await storage.getUser(userId);
+      const isAdmin = user && user.email && AUTHORIZED_ADMIN_EMAILS.includes(user.email);
+      
+      res.json({ isAdmin: !!isAdmin });
+    } catch (error) {
+      console.error('Admin status check error:', error);
+      res.json({ isAdmin: false });
+    }
+  });
+
+  // Upload projects from JSON file (protected with CSRF and admin authorization)
+  app.post("/api/projects/upload", isAuthenticated, isAuthorizedAdmin, csrfProtection, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
