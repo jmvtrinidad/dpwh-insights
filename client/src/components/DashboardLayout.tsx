@@ -235,7 +235,7 @@ export default function DashboardLayout({
 
             <div className="flex-1 overflow-auto">
               <TabsContent value="analytics" className="h-full m-0">
-                <AnalyticsDashboard projects={filteredProjects} isLoading={isLoading} />
+                <AnalyticsDashboard projects={filteredProjects} isLoading={isLoading} onFilterChange={handleFilterChange} />
               </TabsContent>
 
               <TabsContent value="table" className="h-full m-0 p-6">
