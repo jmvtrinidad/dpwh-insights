@@ -5,6 +5,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
 import NotFound from "@/pages/not-found";
+import UrlParamsTest from "@/pages/url-params-test";
+import UrlDebug from "@/pages/url-debug";
 import { useState } from "react";
 
 // todo: remove mock data - this will be replaced with real API calls
@@ -250,6 +252,8 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={DashboardPage} />
+      <Route path="/test-url-params" component={UrlParamsTest} />
+      <Route path="/url-debug*" component={UrlDebug} />
       <Route component={NotFound} />
     </Switch>
   );
