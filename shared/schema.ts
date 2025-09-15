@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, decimal, real, timestamp, jsonb, index } from "drizzle-orm/pg-core";
+import { sqliteTable, text, integer, real, index } from "drizzle-orm/sqlite-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -14,35 +14,35 @@ export const PROJECT_STATUS_VALUES = [
 export type ProjectStatus = typeof PROJECT_STATUS_VALUES[number];
 
 // Session storage table for Replit Auth
-export const sessions = pgTable(
+export const sessions = sqliteTable(
   "sessions",
   {
-    sid: varchar("sid").primaryKey(),
-    sess: jsonb("sess").notNull(),
-    expire: timestamp("expire").notNull(),
+    sid: text("sid").primaryKey(),
+    sess: text("sess", { mode: 'json' }).notNull(),
+    expire: integer("expire", { mode: 'timestamp' }).notNull(),
   },
   (table) => [index("IDX_session_expire").on(table.expire)],
 );
 
 // User storage table for Replit Auth
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
-  firstName: varchar("first_name"),
-  lastName: varchar("last_name"),
-  profileImageUrl: varchar("profile_image_url"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  email: text("email").unique(),
+  firstName: text("first_name"),
+  lastName: text("last_name"),
+  profileImageUrl: text("profile_image_url"),
+  createdAt: integer("created_at", { mode: 'timestamp' }).default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: 'timestamp' }).default(sql`(unixepoch())`),
 });
 
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
 
 // Projects table
-export const projects = pgTable("projects", {
-  contractId: varchar("contract_id").primaryKey(),
+export const projects = sqliteTable("projects", {
+  contractId: text("contract_id").primaryKey(),
   contractName: text("contract_name").notNull(),
-  contractor: text("contractor").array().notNull(),
+  contractor: text("contractor", { mode: 'json' }).$type<string[]>().notNull(),
   implementingOffice: text("implementing_office").notNull(),
   contractCost: real("contract_cost").notNull(),
   contractEffectivityDate: text("contract_effectivity_date").notNull(),
@@ -67,7 +67,7 @@ export const projects = pgTable("projects", {
   index("IDX_projects_status").on(table.status),
   index("IDX_projects_year").on(table.year),
   index("IDX_projects_contract_name").on(table.contractName),
-  // GIN index for array column (contractor)
+  // Index for JSON column (contractor)
   index("IDX_projects_contractor").on(table.contractor),
 ]);
 
