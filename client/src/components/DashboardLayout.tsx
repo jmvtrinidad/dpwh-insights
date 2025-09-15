@@ -19,7 +19,8 @@ import {
   buildUrlParams,
   updateUrlWithState,
   debouncedUpdateUrlForSearch,
-  updateUrlImmediately
+  updateUrlImmediately,
+  debounce
 } from "@/lib/utils";
 
 interface Project {
@@ -57,7 +58,7 @@ interface DashboardLayoutProps {
 }
 
 export default function DashboardLayout({
-  projects,
+  projects: initialProjects,
   isLoading = false,
   isAuthenticated = false,
   onLogin = () => {},
@@ -76,9 +77,67 @@ export default function DashboardLayout({
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isUpdatingFromUrl, setIsUpdatingFromUrl] = useState(false);
+  const [filteredProjectsData, setFilteredProjectsData] = useState<Project[]>(initialProjects);
+  const [isFetchingFiltered, setIsFetchingFiltered] = useState(false);
 
   // Track previous location search to detect URL changes
   const prevLocationSearchRef = useRef<string>('');
+
+  // Debounced function to fetch filtered projects
+  const debouncedFetchFilteredProjects = useCallback(
+    debounce(async (currentFilters: FilterState) => {
+      setIsFetchingFiltered(true);
+      try {
+        const params = new URLSearchParams();
+
+        if (currentFilters.search && currentFilters.search.trim() !== '') {
+          params.set('search', currentFilters.search);
+        }
+        if (currentFilters.region && currentFilters.region !== '__all__') {
+          params.set('region', currentFilters.region);
+        }
+        if (currentFilters.implementingOffice && currentFilters.implementingOffice !== '__all__') {
+          params.set('implementingOffice', currentFilters.implementingOffice);
+        }
+        if (currentFilters.contractor && currentFilters.contractor !== '__all__') {
+          params.set('contractor', currentFilters.contractor);
+        }
+        if (currentFilters.status && currentFilters.status !== '__all__') {
+          params.set('status', currentFilters.status);
+        }
+        if (currentFilters.year && currentFilters.year.length > 0) {
+          params.set('year', currentFilters.year.join(','));
+        }
+        if (currentFilters.province && currentFilters.province !== '__all__') {
+          params.set('province', currentFilters.province);
+        }
+        if (currentFilters.municipality && currentFilters.municipality !== '__all__') {
+          params.set('municipality', currentFilters.municipality);
+        }
+        if (currentFilters.barangay && currentFilters.barangay !== '__all__') {
+          params.set('barangay', currentFilters.barangay);
+        }
+
+        const queryString = params.toString();
+        const url = queryString ? `/api/projects/filtered?${queryString}` : '/api/projects/filtered';
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error('Failed to fetch filtered projects');
+        }
+
+        const data = await response.json();
+        setFilteredProjectsData(data);
+      } catch (error) {
+        console.error('Error fetching filtered projects:', error);
+        // Fallback to initial projects if fetch fails
+        setFilteredProjectsData(initialProjects);
+      } finally {
+        setIsFetchingFiltered(false);
+      }
+    }, 300),
+    [initialProjects]
+  );
 
   // Initialize sidebar state based on mobile
   useEffect(() => {
@@ -101,6 +160,13 @@ export default function DashboardLayout({
       setIsInitialized(true);
     }
   }, [isInitialized]);
+
+  // Fetch filtered projects when filters change
+  useEffect(() => {
+    if (isInitialized && !isUpdatingFromUrl) {
+      debouncedFetchFilteredProjects(filters);
+    }
+  }, [filters, isInitialized, isUpdatingFromUrl, debouncedFetchFilteredProjects]);
 
   // Handle browser navigation (back/forward buttons)
   useEffect(() => {
@@ -130,19 +196,14 @@ export default function DashboardLayout({
 
   // Generate filter options from projects data
   const getUniqueValues = (field: keyof Project): string[] => {
-    if (field === 'contractor') {
-      // Handle contractor arrays by flattening all contractors
-      const allContractors = projects.flatMap(project => project.contractor).filter(Boolean);
-      return Array.from(new Set(allContractors)).sort();
-    }
-    const values = projects.map(project => project[field] as string).filter(Boolean);
+    const values = initialProjects.map(project => project[field] as string).filter(Boolean);
     return Array.from(new Set(values)).sort();
   };
 
   const filterOptions = {
     regions: getUniqueValues('region'),
     implementingOffices: getUniqueValues('implementingOffice'),
-    contractors: getUniqueValues('contractor'),
+    contractors: [], // Contractors are now fetched dynamically
     statuses: getUniqueValues('status'),
     years: getUniqueValues('year'),
     provinces: getUniqueValues('province'),
@@ -150,42 +211,8 @@ export default function DashboardLayout({
     barangays: getUniqueValues('barangay')
   };
 
-  // Apply filters to projects
-  const filteredProjects = projects.filter(project => {
-    // Handle search filter
-    if (filters.search && filters.search.trim() !== '') {
-      const searchTerm = filters.search.toLowerCase();
-      const searchableFields = [
-        project.contractName?.toLowerCase() || '',
-        ...project.contractor.map(c => c.toLowerCase()),
-        project.implementingOffice?.toLowerCase() || ''
-      ];
-
-      const matchesSearch = searchableFields.some(field =>
-        field.includes(searchTerm)
-      );
-
-      if (!matchesSearch) return false;
-    }
-
-    // Handle other filters
-    return Object.entries(filters).every(([key, value]) => {
-      if (key === 'search') return true; // Already handled above
-      if (!value || (Array.isArray(value) ? value.length === 0 : value === '__all__')) return true;
-
-      // Handle contractor filter specially since it's an array
-      if (key === 'contractor') {
-        return project.contractor.includes(value as string);
-      }
-
-      // Handle year filter specially since it's an array
-      if (key === 'year') {
-        return (value as string[]).includes(project.year);
-      }
-
-      return project[key as keyof Project] === value;
-    });
-  });
+  // Use server-filtered projects data
+  const filteredProjects = filteredProjectsData;
 
   const handleFilterChange = (key: keyof FilterState, value: string | string[]) => {
     console.log(`Filter changed: ${key} = ${Array.isArray(value) ? value.join(',') : value}`);
@@ -326,8 +353,8 @@ export default function DashboardLayout({
 
             <div className="flex items-center gap-1 md:gap-2">
               <Badge variant="outline" data-testid="badge-project-count" className="text-xs md:text-sm">
-                <span className="hidden sm:inline">{filteredProjects.length} of {projects.length} projects</span>
-                <span className="sm:hidden">{filteredProjects.length}/{projects.length}</span>
+                <span className="hidden sm:inline">{filteredProjects.length} of {initialProjects.length} projects</span>
+                <span className="sm:hidden">{filteredProjects.length}/{initialProjects.length}</span>
               </Badge>
               <ThemeToggle />
             </div>
@@ -373,11 +400,11 @@ export default function DashboardLayout({
 
             <div className="flex-1 overflow-auto">
               <TabsContent value="analytics" className="h-full m-0">
-                <AnalyticsDashboard projects={filteredProjects} isLoading={isLoading} onFilterChange={handleFilterChange} />
+                <AnalyticsDashboard projects={filteredProjects} isLoading={isLoading || isFetchingFiltered} onFilterChange={handleFilterChange} />
               </TabsContent>
 
               <TabsContent value="table" className="h-full m-0 p-3 md:p-6">
-                <ProjectsTable projects={filteredProjects} isLoading={isLoading} />
+                <ProjectsTable projects={filteredProjects} isLoading={isLoading || isFetchingFiltered} />
               </TabsContent>
 
               <TabsContent value="admin" className="h-full m-0 p-3 md:p-6">

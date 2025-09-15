@@ -7,6 +7,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Filter, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import ContractorCombobox from "./ContractorCombobox";
 
 interface FilterOptions {
   regions: string[];
@@ -61,6 +62,7 @@ export default function FilterSidebar({
       [section]: !prev[section]
     }));
   };
+
 
   const getActiveFilters = () => {
     const activeFilters: Array<{ key: keyof FilterState; value: string; label: string }> = [];
@@ -393,17 +395,11 @@ export default function FilterSidebar({
                       </Button>
                     )}
                   </div>
-                  <Select value={filters.contractor} onValueChange={(value) => onFilterChange('contractor', value)}>
-                    <SelectTrigger data-testid="select-contractor">
-                      <SelectValue placeholder="All contractors" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All contractors</SelectItem>
-                      {options.contractors.map(contractor => (
-                        <SelectItem key={contractor} value={contractor}>{contractor}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <ContractorCombobox
+                    value={filters.contractor}
+                    onValueChange={(value) => onFilterChange('contractor', value)}
+                    placeholder="All contractors"
+                  />
                 </div>
               </CollapsibleContent>
             </Collapsible>

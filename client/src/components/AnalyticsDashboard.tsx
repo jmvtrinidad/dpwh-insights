@@ -125,6 +125,12 @@ export default function AnalyticsDashboard({
   >('desc');
   const [officePageSize, setOfficePageSize] = useState(10);
   const [officePage, setOfficePage] = useState(1);
+  const [yearSortBy, setYearSortBy] = useState<'count' | 'cost'>('cost');
+  const [yearSortDirection, setYearSortDirection] = useState<
+    'asc' | 'desc'
+  >('desc');
+  const [yearPageSize, setYearPageSize] = useState(10);
+  const [yearPage, setYearPage] = useState(1);
   const [contractorPageSize, setContractorPageSize] = useState(10);
   const contractorsPerPage = 10;
 
@@ -341,7 +347,7 @@ export default function AnalyticsDashboard({
           ? b.totalCost - a.totalCost
           : b.count - a.count
       )
-      .slice(0, 8); // Top 8 for better visualization
+      .slice(0, 10); // Top 10 for better visualization
   };
 
   const chartColors = {
@@ -396,8 +402,23 @@ export default function AnalyticsDashboard({
     return Object.values(grouped);
   };
 
+  const getAllYears = () => {
+    const grouped = projects.reduce((acc, project) => {
+      const key = project.year;
+      if (!acc[key]) {
+        acc[key] = { name: key, count: 0, totalCost: 0 };
+      }
+      acc[key].count++;
+      acc[key].totalCost += project.contractCost;
+      return acc;
+    }, {} as Record<string, { name: string; count: number; totalCost: number }>);
+
+    return Object.values(grouped);
+  };
+
   const allRegions = getAllRegions();
   const allImplementingOffices = getAllImplementingOffices();
+  const allYears = getAllYears();
 
   // Sort regions and implementing offices
   const sortedRegions = [...allRegions].sort((a, b) => {
@@ -420,6 +441,16 @@ export default function AnalyticsDashboard({
     return officeSortDirection === 'asc' ? comparison : -comparison;
   });
 
+  const sortedYears = [...allYears].sort((a, b) => {
+    let comparison = 0;
+    if (yearSortBy === 'cost') {
+      comparison = a.totalCost - b.totalCost;
+    } else {
+      comparison = a.count - b.count;
+    }
+    return yearSortDirection === 'asc' ? comparison : -comparison;
+  });
+
   // Pagination for regions
   const totalRegionPages = Math.ceil(sortedRegions.length / regionPageSize);
   const startRegionIndex = (regionPage - 1) * regionPageSize;
@@ -436,6 +467,12 @@ export default function AnalyticsDashboard({
     startOfficeIndex,
     endOfficeIndex
   );
+
+  // Pagination for years
+  const totalYearPages = Math.ceil(sortedYears.length / yearPageSize);
+  const startYearIndex = (yearPage - 1) * yearPageSize;
+  const endYearIndex = startYearIndex + yearPageSize;
+  const currentYears = sortedYears.slice(startYearIndex, endYearIndex);
 
   // Pagination for contractors
   const totalContractorPages = Math.ceil(
@@ -464,6 +501,15 @@ export default function AnalyticsDashboard({
     } else {
       setOfficeSortBy(column);
       setOfficeSortDirection('desc');
+    }
+  };
+
+  const handleYearSort = (column: 'count' | 'cost') => {
+    if (yearSortBy === column) {
+      setYearSortDirection(yearSortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setYearSortBy(column);
+      setYearSortDirection('desc');
     }
   };
 
@@ -1138,12 +1184,29 @@ export default function AnalyticsDashboard({
                 )}
               </div>
 
-              {/* Other Analytics */}
+              {/* General Analytics */}
               <div className="space-y-6">
-                <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                  <BarChart3 className="h-6 w-6 text-primary" />
-                  General Analytics
-                </h2>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <BarChart3 className="h-6 w-6 text-primary" />
+                    General Analytics
+                  </h2>
+                  <Select
+                    value={locationMetric}
+                    onValueChange={(value: LocationMetricType) =>
+                      setLocationMetric(value)
+                    }
+                    data-testid="select-general-metric"
+                  >
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Select metric" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="count">Total Projects</SelectItem>
+                      <SelectItem value="cost">Project Cost</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {/* Projects by Status */}
@@ -1222,10 +1285,6 @@ export default function AnalyticsDashboard({
                 </div>
               </div>
 
-              {/* Projects by Year List Section */}
-              <div className="space-y-6">
-                <ProjectsByYearList projects={projects} isLoading={isLoading} />
-              </div>
 
               {/* Contractor Analytics Section */}
               <div className="space-y-6">
@@ -2144,7 +2203,7 @@ export default function AnalyticsDashboard({
         )}
       </div>
 
-      {/* Other Analytics */}
+      {/* General Analytics */}
       <div className="space-y-6">
         <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
           <BarChart3 className="h-6 w-6 text-primary" />
@@ -2226,6 +2285,182 @@ export default function AnalyticsDashboard({
             </CardContent>
           </Card>
         </div>
+
+        {/* Projects by Year List View */}
+        <Card data-testid="years-list-card" className="hover-elevate">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Projects by Year - List View ({sortedYears.length} years)
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Click column headers to sort • Currently sorted by{' '}
+              {yearSortBy === 'cost' ? 'total cost' : 'total projects'} (
+              {yearSortDirection === 'asc' ? 'ascending' : 'descending'})
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-8">#</TableHead>
+                    <TableHead>Year</TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleYearSort('count')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Total Projects
+                        {getSortIcon(
+                          'count',
+                          yearSortBy,
+                          yearSortDirection
+                        )}
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      className="text-right cursor-pointer hover:bg-muted/50 select-none"
+                      onClick={() => handleYearSort('cost')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Total Cost
+                        {getSortIcon(
+                          'cost',
+                          yearSortBy,
+                          yearSortDirection
+                        )}
+                      </div>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {currentYears.map((year, index) => (
+                    <TableRow
+                      key={year.name}
+                      data-testid={`row-year-${year.name
+                        .replace(/\s+/g, '-')
+                        .toLowerCase()}`}
+                    >
+                      <TableCell className="font-medium">
+                        {startYearIndex + index + 1}
+                      </TableCell>
+                      <TableCell
+                        className="font-medium cursor-pointer hover:bg-muted/50 transition-colors"
+                        title={year.name}
+                        onClick={() => onFilterChange?.('year', year.name)}
+                      >
+                        {year.name}
+                      </TableCell>
+                      <TableCell
+                        className="text-right font-medium"
+                        data-testid={`text-projects-${year.name
+                          .replace(/\s+/g, '-')
+                          .toLowerCase()}`}
+                      >
+                        {year.count}
+                      </TableCell>
+                      <TableCell
+                        className="text-right font-medium"
+                        data-testid={`text-cost-${year.name
+                          .replace(/\s+/g, '-')
+                          .toLowerCase()}`}
+                      >
+                        {formatCost(year.totalCost)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Pagination and Page Size Controls */}
+            <div className="mt-4 space-y-3">
+              {/* Mobile-first responsive layout */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                {/* Page size selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Show</span>
+                  <Select value={yearPageSize.toString()} onValueChange={(value) => {
+                    setYearPageSize(Number(value));
+                    setYearPage(1);
+                  }}>
+                    <SelectTrigger className="w-16 sm:w-20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5</SelectItem>
+                      <SelectItem value="10">10</SelectItem>
+                      <SelectItem value="25">25</SelectItem>
+                      <SelectItem value="50">50</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-sm text-muted-foreground hidden sm:inline">per page</span>
+                  <span className="text-sm text-muted-foreground sm:hidden">/page</span>
+                </div>
+
+                {/* Item count - hidden on very small screens */}
+                <div className="hidden md:flex items-center">
+                  <span className="text-sm text-muted-foreground">
+                    {startYearIndex + 1}-{Math.min(endYearIndex, sortedYears.length)} of {sortedYears.length}
+                  </span>
+                </div>
+
+                {/* Navigation buttons */}
+                <div className="flex items-center justify-center sm:justify-end space-x-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setYearPage(prev => Math.max(prev - 1, 1))}
+                    disabled={yearPage === 1}
+                    className="px-2 sm:px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline ml-1">Prev</span>
+                  </Button>
+
+                  {/* Page numbers */}
+                  <div className="flex items-center space-x-1">
+                    {Array.from({ length: Math.min(5, totalYearPages) }, (_, i) => {
+                      const pageNum = yearPage <= 3 ? i + 1 :
+                                      yearPage >= totalYearPages - 2 ? totalYearPages - 4 + i :
+                                      yearPage - 2 + i;
+                      return (
+                        <Button
+                          key={pageNum}
+                          variant={yearPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setYearPage(pageNum)}
+                          className="w-8 h-8 p-0 text-xs"
+                        >
+                          {pageNum}
+                        </Button>
+                      );
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setYearPage(prev => Math.min(prev + 1, totalYearPages))}
+                    disabled={yearPage === totalYearPages}
+                    className="px-2 sm:px-3"
+                  >
+                    <span className="hidden sm:inline mr-1">Next</span>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Mobile item count - shown below on small screens */}
+              <div className="flex justify-center md:hidden">
+                <span className="text-xs text-muted-foreground">
+                  {startYearIndex + 1}-{Math.min(endYearIndex, sortedYears.length)} of {sortedYears.length}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
       {/* Contractor Analytics Section */}
       <div className="space-y-6">

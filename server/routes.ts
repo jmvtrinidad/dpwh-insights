@@ -159,6 +159,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get filtered projects (public for viewing)
+  app.get('/api/projects/filtered', async (req, res) => {
+    try {
+      const filters = {
+        search: req.query.search as string,
+        region: req.query.region as string,
+        implementingOffice: req.query.implementingOffice as string,
+        contractor: req.query.contractor as string,
+        status: req.query.status as string,
+        year: req.query.year ? (req.query.year as string).split(',') : undefined,
+        province: req.query.province as string,
+        municipality: req.query.municipality as string,
+        barangay: req.query.barangay as string,
+      };
+
+      const projects = await storage.getFilteredProjects(filters);
+      res.json(projects);
+    } catch (error) {
+      console.error('Error fetching filtered projects:', error);
+      res.status(500).json({ error: 'Failed to fetch filtered projects' });
+    }
+  });
+
   // Get project by contract ID
   app.get('/api/projects/:contractId', async (req, res) => {
     try {
@@ -403,6 +426,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     }
   );
+
+  // Get contractors with search and pagination
+  app.get('/api/contractors', async (req, res) => {
+    try {
+      const { search, limit, offset } = req.query;
+      const limitNum = limit ? parseInt(limit as string) : 50;
+      const offsetNum = offset ? parseInt(offset as string) : 0;
+
+      const result = await storage.getContractors(
+        search as string,
+        limitNum,
+        offsetNum
+      );
+
+      res.json(result);
+    } catch (error) {
+      console.error('Error fetching contractors:', error);
+      res.status(500).json({ error: 'Failed to fetch contractors' });
+    }
+  });
+
+  // Reset database (development only)
+  app.post('/api/reset-db', async (req, res) => {
+    try {
+      if (process.env.NODE_ENV !== 'development') {
+        return res.status(403).json({ error: 'Reset only available in development' });
+      }
+
+      await storage.resetDatabase();
+      res.json({ message: 'Database reset successfully' });
+    } catch (error) {
+      console.error('Error resetting database:', error);
+      res.status(500).json({ error: 'Failed to reset database' });
+    }
+  });
 
   // Handle multer errors (must be after routes)
   app.use((error: any, req: any, res: any, next: any) => {

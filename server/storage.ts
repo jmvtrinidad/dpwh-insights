@@ -1,7 +1,7 @@
 import { type User, type UpsertUser, type Project, type InsertProject, type UpdateProject, projects, users } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { db } from "./db";
-import { eq, inArray } from "drizzle-orm";
+import { eq, inArray, sql, and } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -16,10 +16,23 @@ export interface IStorage {
   // Project operations
   getProject(contractId: string): Promise<Project | undefined>;
   getAllProjects(): Promise<Project[]>;
+  getFilteredProjects(filters: {
+    search?: string;
+    region?: string;
+    implementingOffice?: string;
+    contractor?: string;
+    status?: string;
+    year?: string[];
+    province?: string;
+    municipality?: string;
+    barangay?: string;
+  }): Promise<Project[]>;
   createProject(project: InsertProject): Promise<Project>;
   updateProject(contractId: string, project: UpdateProject): Promise<Project | undefined>;
   deleteProject(contractId: string): Promise<boolean>;
   createManyProjects(projects: InsertProject[]): Promise<Project[]>;
+  getContractors(search?: string, limit?: number, offset?: number): Promise<{ contractors: string[]; total: number }>;
+  resetDatabase(): Promise<void>;
 }
 
 export class MemStorage implements IStorage {
@@ -85,6 +98,48 @@ export class MemStorage implements IStorage {
     return Array.from(this.projects.values());
   }
 
+  async getFilteredProjects(filters: {
+    search?: string;
+    region?: string;
+    implementingOffice?: string;
+    contractor?: string;
+    status?: string;
+    year?: string[];
+    province?: string;
+    municipality?: string;
+    barangay?: string;
+  }): Promise<Project[]> {
+    let projects = Array.from(this.projects.values());
+
+    // Apply search filter
+    if (filters.search && filters.search.trim() !== '') {
+      const searchTerm = filters.search.toLowerCase();
+      projects = projects.filter(project => {
+        const searchableFields = [
+          project.contractName?.toLowerCase() || '',
+          ...project.contractor.map(c => c.toLowerCase()),
+          project.implementingOffice?.toLowerCase() || ''
+        ];
+        return searchableFields.some(field => field.includes(searchTerm));
+      });
+    }
+
+    // Apply other filters
+    projects = projects.filter(project => {
+      if (filters.region && filters.region !== '__all__' && project.region !== filters.region) return false;
+      if (filters.implementingOffice && filters.implementingOffice !== '__all__' && project.implementingOffice !== filters.implementingOffice) return false;
+      if (filters.contractor && filters.contractor !== '__all__' && !project.contractor.includes(filters.contractor)) return false;
+      if (filters.status && filters.status !== '__all__' && project.status !== filters.status) return false;
+      if (filters.year && filters.year.length > 0 && !filters.year.includes(project.year)) return false;
+      if (filters.province && filters.province !== '__all__' && project.province !== filters.province) return false;
+      if (filters.municipality && filters.municipality !== '__all__' && project.municipality !== filters.municipality) return false;
+      if (filters.barangay && filters.barangay !== '__all__' && project.barangay !== filters.barangay) return false;
+      return true;
+    });
+
+    return projects;
+  }
+
   async createProject(insertProject: InsertProject): Promise<Project> {
     const project: Project = {
       ...insertProject,
@@ -129,6 +184,34 @@ export class MemStorage implements IStorage {
       projects.push(project);
     }
     return projects;
+  }
+
+  async getContractors(search?: string, limit?: number, offset?: number): Promise<{ contractors: string[]; total: number }> {
+    const allContractors = Array.from(this.projects.values())
+      .flatMap(project => project.contractor)
+      .filter(Boolean);
+
+    const uniqueContractors = Array.from(new Set(allContractors)).sort();
+
+    let filtered = uniqueContractors;
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filtered = uniqueContractors.filter(contractor =>
+        contractor.toLowerCase().includes(searchLower)
+      );
+    }
+
+    const total = filtered.length;
+    const start = offset || 0;
+    const end = limit ? start + limit : filtered.length;
+    const contractors = filtered.slice(start, end);
+
+    return { contractors, total };
+  }
+
+  async resetDatabase(): Promise<void> {
+    this.users.clear();
+    this.projects.clear();
   }
 }
 
@@ -204,6 +287,57 @@ export class DbStorage implements IStorage {
       return result;
     } catch (error) {
       console.error('DbStorage.getAllProjects error:', error);
+      throw error;
+    }
+  }
+
+  async getFilteredProjects(filters: {
+    search?: string;
+    region?: string;
+    implementingOffice?: string;
+    contractor?: string;
+    status?: string;
+    year?: string[];
+    province?: string;
+    municipality?: string;
+    barangay?: string;
+  }): Promise<Project[]> {
+    try {
+      // For now, get all projects and filter in memory
+      // This is simpler and works, we can optimize with SQL queries later
+      const allProjects = await this.getAllProjects();
+      let projects = allProjects;
+
+      // Apply search filter
+      if (filters.search && filters.search.trim() !== '') {
+        const searchTerm = filters.search.toLowerCase();
+        projects = projects.filter(project => {
+          const searchableFields = [
+            project.contractName?.toLowerCase() || '',
+            ...project.contractor.map(c => c.toLowerCase()),
+            project.implementingOffice?.toLowerCase() || ''
+          ];
+          return searchableFields.some(field => field.includes(searchTerm));
+        });
+      }
+
+      // Apply other filters
+      projects = projects.filter(project => {
+        if (filters.region && filters.region !== '__all__' && project.region !== filters.region) return false;
+        if (filters.implementingOffice && filters.implementingOffice !== '__all__' && project.implementingOffice !== filters.implementingOffice) return false;
+        if (filters.contractor && filters.contractor !== '__all__' && !project.contractor.includes(filters.contractor)) return false;
+        if (filters.status && filters.status !== '__all__' && project.status !== filters.status) return false;
+        if (filters.year && filters.year.length > 0 && !filters.year.includes(project.year)) return false;
+        if (filters.province && filters.province !== '__all__' && project.province !== filters.province) return false;
+        if (filters.municipality && filters.municipality !== '__all__' && project.municipality !== filters.municipality) return false;
+        if (filters.barangay && filters.barangay !== '__all__' && project.barangay !== filters.barangay) return false;
+        return true;
+      });
+
+      console.log('DbStorage.getFilteredProjects returning', projects.length, 'filtered projects');
+      return projects;
+    } catch (error) {
+      console.error('DbStorage.getFilteredProjects error:', error);
       throw error;
     }
   }
@@ -308,6 +442,46 @@ export class DbStorage implements IStorage {
       return result;
     } catch (error) {
       console.error('DbStorage.createManyProjects error:', error);
+      throw error;
+    }
+  }
+
+  async getContractors(search?: string, limit?: number, offset?: number): Promise<{ contractors: string[]; total: number }> {
+    try {
+      // For now, get all projects and process in memory
+      // This is acceptable since contractors are cached and we have pagination
+      const allProjects = await this.getAllProjects();
+
+      const allContractors = allProjects.flatMap(project => project.contractor).filter(Boolean);
+      const uniqueContractors = Array.from(new Set(allContractors)).sort();
+
+      let filtered = uniqueContractors;
+      if (search) {
+        const searchLower = search.toLowerCase();
+        filtered = uniqueContractors.filter(contractor =>
+          contractor.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const total = filtered.length;
+      const start = offset || 0;
+      const end = limit ? start + limit : filtered.length;
+      const contractors = filtered.slice(start, end);
+
+      return { contractors, total };
+    } catch (error) {
+      console.error('DbStorage.getContractors error:', error);
+      throw error;
+    }
+  }
+
+  async resetDatabase(): Promise<void> {
+    try {
+      // Truncate all tables in the correct order (respecting foreign keys)
+      await db.delete(projects);
+      await db.delete(users);
+    } catch (error) {
+      console.error('DbStorage.resetDatabase error:', error);
       throw error;
     }
   }
