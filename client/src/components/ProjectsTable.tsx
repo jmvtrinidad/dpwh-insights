@@ -4,14 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -139,31 +131,55 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
     });
   };
 
-  const SortableHeader = ({ field, children }: { field: SortField; children: React.ReactNode }) => (
-    <TableHead>
-      <Button
-        variant="ghost"
-        onClick={() => handleSort(field)}
-        className="h-auto p-0 font-medium hover:bg-transparent"
-        data-testid={`sort-${field}`}
-      >
-        {children}
-        <ArrowUpDown className="ml-2 h-4 w-4" />
-      </Button>
-    </TableHead>
-  );
 
   if (isLoading) {
     return (
       <Card>
         <CardHeader>
-          <div className="h-6 bg-muted rounded w-1/4 animate-pulse"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="h-5 w-5 bg-muted rounded animate-pulse"></div>
+              <div className="h-6 bg-muted rounded w-32 animate-pulse"></div>
+            </div>
+            <div className="h-6 bg-muted rounded w-24 animate-pulse"></div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="h-10 bg-muted rounded animate-pulse"></div>
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="h-12 bg-muted rounded animate-pulse"></div>
+        <CardContent className="space-y-4">
+          {/* Loading Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <div className="flex flex-wrap gap-2">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-8 bg-muted rounded w-20 animate-pulse"></div>
+              ))}
+            </div>
+            <div className="h-8 bg-muted rounded w-32 animate-pulse"></div>
+          </div>
+          
+          {/* Loading Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, i) => (
+              <Card key={i} className="animate-pulse">
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="h-4 bg-muted rounded w-20 mb-2"></div>
+                      <div className="h-5 bg-muted rounded w-full"></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <div className="h-5 bg-muted rounded w-12"></div>
+                      <div className="h-5 bg-muted rounded w-16"></div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  {[...Array(6)].map((_, j) => (
+                    <div key={j} className="space-y-1">
+                      <div className="h-3 bg-muted rounded w-24"></div>
+                      <div className="h-4 bg-muted rounded w-full"></div>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
             ))}
           </div>
         </CardContent>
@@ -177,7 +193,7 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-primary" />
-            Projects Data Table
+            Projects Overview
           </CardTitle>
           <Badge variant="outline" data-testid="table-project-count">
             {filteredAndSortedProjects.length} of {projects.length} projects
@@ -185,8 +201,59 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Table Controls */}
-        <div className="flex items-center justify-end gap-4">
+        {/* Controls */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          {/* Sorting Controls */}
+          <div className="flex flex-wrap gap-2 items-center">
+            <span className="text-sm text-muted-foreground mr-2">Sort by:</span>
+            <Button
+              variant={sortField === 'contractId' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('contractId')}
+              data-testid="sort-contractId"
+            >
+              Contract ID
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            </Button>
+            <Button
+              variant={sortField === 'contractName' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('contractName')}
+              data-testid="sort-contractName"
+            >
+              Project Name
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            </Button>
+            <Button
+              variant={sortField === 'status' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('status')}
+              data-testid="sort-status"
+            >
+              Status
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            </Button>
+            <Button
+              variant={sortField === 'contractCost' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('contractCost')}
+              data-testid="sort-contractCost"
+            >
+              Cost
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            </Button>
+            <Button
+              variant={sortField === 'year' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => handleSort('year')}
+              data-testid="sort-year"
+            >
+              Year
+              <ArrowUpDown className="ml-1 h-3 w-3" />
+            </Button>
+          </div>
+          
+          {/* Page Size Control */}
           <Select
             value={pageSize.toString()}
             onValueChange={(value) => {
@@ -198,79 +265,130 @@ export default function ProjectsTable({ projects, isLoading = false }: ProjectsT
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="10">10 rows</SelectItem>
-              <SelectItem value="25">25 rows</SelectItem>
-              <SelectItem value="50">50 rows</SelectItem>
-              <SelectItem value="100">100 rows</SelectItem>
+              <SelectItem value="10">10 cards</SelectItem>
+              <SelectItem value="25">25 cards</SelectItem>
+              <SelectItem value="50">50 cards</SelectItem>
+              <SelectItem value="100">100 cards</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* Table */}
-        <div className="border rounded-md">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <SortableHeader field="contractId">Contract ID</SortableHeader>
-                <SortableHeader field="contractName">Project Name</SortableHeader>
-                <SortableHeader field="status">Status</SortableHeader>
-                <SortableHeader field="contractor">Contractor</SortableHeader>
-                <SortableHeader field="contractCost">Cost</SortableHeader>
-                <SortableHeader field="region">Region</SortableHeader>
-                <SortableHeader field="implementingOffice">Office</SortableHeader>
-                <SortableHeader field="year">Year</SortableHeader>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {currentProjects.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    'No projects available.'
-                  </TableCell>
-                </TableRow>
-              ) : (
-                currentProjects.map((project) => (
-                  <TableRow key={project.contractId} data-testid={`row-project-${project.contractId}`}>
-                    <TableCell className="font-mono text-sm">
-                      {project.contractId}
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate" title={project.contractName}>
+        {/* Projects Cards Grid */}
+        {currentProjects.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>No projects available.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {currentProjects.map((project) => (
+              <Card key={project.contractId} className="hover-elevate" data-testid={`row-project-${project.contractId}`}>
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="text-sm font-mono text-muted-foreground">
+                        {project.contractId}
+                      </div>
+                      <h3 className="font-semibold text-sm leading-tight mt-1" title={project.contractName}>
                         {project.contractName}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {getStatusBadge(project.status, project.accomplishmentInPercentage)}
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate" title={project.contractor}>
-                        {project.contractor}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right font-mono">
-                      {formatCurrency(project.contractCost)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="text-xs">
-                        {project.region}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="max-w-xs">
-                      <div className="truncate text-sm" title={project.implementingOffice}>
-                        {project.implementingOffice}
-                      </div>
-                    </TableCell>
-                    <TableCell>
+                      </h3>
+                    </div>
+                    <div className="flex flex-col gap-1 items-end shrink-0">
                       <Badge variant="secondary" className="text-xs">
                         {project.year}
                       </Badge>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                      {getStatusBadge(project.status, project.accomplishmentInPercentage)}
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  {/* Cost */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Contract Cost</span>
+                    <span className="font-mono font-semibold text-lg text-primary">
+                      {formatCurrency(project.contractCost)}
+                    </span>
+                  </div>
+
+                  {/* Contractor */}
+                  <div>
+                    <span className="text-sm text-muted-foreground block">Contractor</span>
+                    <span className="font-medium text-sm" title={project.contractor}>
+                      {project.contractor}
+                    </span>
+                  </div>
+
+                  {/* Location */}
+                  <div>
+                    <span className="text-sm text-muted-foreground block">Location</span>
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        {project.region}
+                      </Badge>
+                      {project.province && (
+                        <Badge variant="outline" className="text-xs">
+                          {project.province}
+                        </Badge>
+                      )}
+                      {project.municipality && (
+                        <Badge variant="outline" className="text-xs">
+                          {project.municipality}
+                        </Badge>
+                      )}
+                    </div>
+                    {project.barangay && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Barangay: {project.barangay}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Implementing Office */}
+                  <div>
+                    <span className="text-sm text-muted-foreground block">Implementing Office</span>
+                    <span className="text-sm" title={project.implementingOffice}>
+                      {project.implementingOffice}
+                    </span>
+                  </div>
+
+                  {/* Contract Dates */}
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-muted-foreground block">Start Date</span>
+                      <span className="font-medium">
+                        {formatDate(project.contractEffectivityDate)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground block">End Date</span>
+                      <span className="font-medium">
+                        {formatDate(project.contractExpiryDate)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Source of Funds */}
+                  {project.sourceOfFundsDesc && (
+                    <div>
+                      <span className="text-sm text-muted-foreground block">Source of Funds</span>
+                      <div className="text-sm">
+                        {project.sourceOfFundsDesc}
+                        {project.sourceOfFundsYear && (
+                          <span className="text-muted-foreground"> ({project.sourceOfFundsYear})</span>
+                        )}
+                        {project.sourceOfFundsSource && (
+                          <span className="text-muted-foreground block text-xs">
+                            {project.sourceOfFundsSource}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
