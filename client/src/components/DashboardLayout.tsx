@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -8,6 +9,15 @@ import ProjectsTable from "./ProjectsTable";
 import AdminLogin from "./AdminLogin";
 import ThemeToggle from "./ThemeToggle";
 import { BarChart3, Table, Settings, Filter, X } from "lucide-react";
+import { 
+  FilterState, 
+  DEFAULT_FILTER_STATE, 
+  parseUrlParams, 
+  buildUrlParams,
+  updateUrlWithState,
+  debouncedUpdateUrlForSearch,
+  updateUrlImmediately
+} from "@/lib/utils";
 
 interface Project {
   contractId: string;
@@ -29,17 +39,6 @@ interface Project {
   barangay: string;
 }
 
-interface FilterState {
-  search: string;
-  region: string;
-  implementingOffice: string;
-  contractor: string;
-  status: string;
-  year: string;
-  province: string;
-  municipality: string;
-  barangay: string;
-}
 
 interface DashboardLayoutProps {
   projects: Project[];
@@ -62,19 +61,49 @@ export default function DashboardLayout({
   isUploading = false,
   uploadProgress = 0
 }: DashboardLayoutProps) {
+  const [location] = useLocation();
   const [activeTab, setActiveTab] = useState("analytics");
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const [filters, setFilters] = useState<FilterState>({
-    search: '',
-    region: '__all__',
-    implementingOffice: '__all__',
-    contractor: '__all__',
-    status: 'Completed',
-    year: '__all__',
-    province: '__all__',
-    municipality: '__all__',
-    barangay: '__all__'
-  });
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isUpdatingFromUrl, setIsUpdatingFromUrl] = useState(false);
+  
+  // Track previous location search to detect URL changes
+  const prevLocationSearchRef = useRef<string>('');
+  
+  // Initialize state from URL on component mount
+  useEffect(() => {
+    const urlParams = parseUrlParams(window.location.search);
+    console.log('Initializing dashboard state from URL:', urlParams);
+    
+    setFilters(urlParams.filters);
+    setActiveTab(urlParams.activeTab);
+    prevLocationSearchRef.current = window.location.search;
+    setIsInitialized(true);
+  }, []); // Only run once on mount
+
+  // Watch for URL changes from browser navigation (back/forward) or programmatic changes
+  useEffect(() => {
+    const currentSearch = location.split('?')[1] || '';
+    const fullSearch = currentSearch ? `?${currentSearch}` : '';
+    
+    // Only process URL changes if they're different from previous and not during our own updates
+    if (isInitialized && !isUpdatingFromUrl && fullSearch !== prevLocationSearchRef.current) {
+      console.log('URL changed, updating state from:', fullSearch);
+      setIsUpdatingFromUrl(true);
+      
+      const urlParams = parseUrlParams(fullSearch);
+      setFilters(urlParams.filters);
+      setActiveTab(urlParams.activeTab);
+      prevLocationSearchRef.current = fullSearch;
+      
+      // Reset the flag after state updates complete
+      setTimeout(() => setIsUpdatingFromUrl(false), 0);
+    }
+  }, [location, isInitialized, isUpdatingFromUrl]);
+
+  // Note: URL updates are now handled directly in handleFilterChange and tab change handlers
+  // This avoids duplicate updates and provides more control over when to use debounced vs immediate updates
 
   // Generate filter options from projects data
   const getUniqueValues = (field: keyof Project): string[] => {
@@ -121,25 +150,43 @@ export default function DashboardLayout({
 
   const handleFilterChange = (key: keyof FilterState, value: string) => {
     console.log(`Filter changed: ${key} = ${value}`);
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [key]: value
-    }));
+    };
+    setFilters(newFilters);
+    
+    // For search filter, use debounced update; for others, update immediately
+    if (!isUpdatingFromUrl) {
+      if (key === 'search') {
+        debouncedUpdateUrlForSearch(newFilters, activeTab);
+      } else {
+        updateUrlImmediately(newFilters, activeTab);
+      }
+      prevLocationSearchRef.current = `?${buildUrlParams(newFilters, activeTab)}` || '';
+    }
   };
 
   const handleClearFilters = () => {
     console.log('Clearing all filters');
-    setFilters({
-      search: '',
-      region: '__all__',
-      implementingOffice: '__all__',
-      contractor: '__all__',
-      status: 'Completed',
-      year: '__all__',
-      province: '__all__',
-      municipality: '__all__',
-      barangay: '__all__'
-    });
+    setFilters(DEFAULT_FILTER_STATE);
+    
+    // Update URL immediately when clearing filters
+    if (!isUpdatingFromUrl) {
+      updateUrlImmediately(DEFAULT_FILTER_STATE, activeTab);
+      prevLocationSearchRef.current = `?${buildUrlParams(DEFAULT_FILTER_STATE, activeTab)}` || '';
+    }
+  };
+
+  const handleTabChange = (newTab: string) => {
+    console.log(`Tab changed to: ${newTab}`);
+    setActiveTab(newTab);
+    
+    // Update URL immediately when tab changes
+    if (!isUpdatingFromUrl) {
+      updateUrlImmediately(filters, newTab);
+      prevLocationSearchRef.current = `?${buildUrlParams(filters, newTab)}` || '';
+    }
   };
 
   const activeFiltersCount = Object.entries(filters).filter(([key, value]) => 
@@ -203,7 +250,7 @@ export default function DashboardLayout({
 
         {/* Main Dashboard Content */}
         <main className="flex-1 overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <div className="border-b border-border">
               <TabsList className="inline-flex h-12 items-center justify-center rounded-none bg-transparent p-1 text-muted-foreground mx-4 mt-2">
                 <TabsTrigger 
