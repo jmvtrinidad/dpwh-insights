@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { X, Filter, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -24,7 +25,7 @@ interface FilterState {
   implementingOffice: string;
   contractor: string;
   status: string;
-  year: string;
+  year: string[];
   province: string;
   municipality: string;
   barangay: string;
@@ -33,7 +34,7 @@ interface FilterState {
 interface FilterSidebarProps {
   filters: FilterState;
   options: FilterOptions;
-  onFilterChange: (key: keyof FilterState, value: string) => void;
+  onFilterChange: (key: keyof FilterState, value: string | string[]) => void;
   onClearFilters: () => void;
   activeFiltersCount: number;
   isCollapsed?: boolean;
@@ -64,10 +65,11 @@ export default function FilterSidebar({
   const getActiveFilters = () => {
     const activeFilters: Array<{ key: keyof FilterState; value: string; label: string }> = [];
     Object.entries(filters).forEach(([key, value]) => {
-      if (key !== 'search' && value && value !== '__all__') {
+      if (key !== 'search' && value && (Array.isArray(value) ? value.length > 0 : value !== '__all__')) {
+        const displayValue = Array.isArray(value) ? value.join(', ') : value;
         activeFilters.push({
           key: key as keyof FilterState,
-          value,
+          value: displayValue,
           label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')
         });
       }
@@ -342,28 +344,39 @@ export default function FilterSidebar({
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-sm font-medium text-muted-foreground">Year</label>
-                    {filters.year && filters.year !== '__all__' && (
+                    {filters.year.length > 0 && (
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4"
-                        onClick={() => onFilterChange('year', '__all__')}
+                        onClick={() => onFilterChange('year', [])}
                       >
                         <X className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
-                  <Select value={filters.year} onValueChange={(value) => onFilterChange('year', value)}>
-                    <SelectTrigger data-testid="select-year">
-                      <SelectValue placeholder="All years" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">All years</SelectItem>
-                      {options.years.map(year => (
-                        <SelectItem key={year} value={year}>{year}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {options.years.map(year => (
+                      <div key={year} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`year-${year}`}
+                          checked={filters.year.includes(year)}
+                          onCheckedChange={(checked) => {
+                            const newYears = checked
+                              ? [...filters.year, year]
+                              : filters.year.filter(y => y !== year);
+                            onFilterChange('year', newYears);
+                          }}
+                        />
+                        <label
+                          htmlFor={`year-${year}`}
+                          className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                        >
+                          {year}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 <div>

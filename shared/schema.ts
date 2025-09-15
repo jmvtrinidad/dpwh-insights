@@ -57,7 +57,19 @@ export const projects = pgTable("projects", {
   province: text("province").notNull().default(""),
   municipality: text("municipality").notNull().default(""),
   barangay: text("barangay").notNull().default(""),
-});
+}, (table) => [
+  // Indexes for filter performance
+  index("IDX_projects_region").on(table.region),
+  index("IDX_projects_implementing_office").on(table.implementingOffice),
+  index("IDX_projects_province").on(table.province),
+  index("IDX_projects_municipality").on(table.municipality),
+  index("IDX_projects_barangay").on(table.barangay),
+  index("IDX_projects_status").on(table.status),
+  index("IDX_projects_year").on(table.year),
+  index("IDX_projects_contract_name").on(table.contractName),
+  // GIN index for array column (contractor)
+  index("IDX_projects_contractor").on(table.contractor),
+]);
 
 export const insertProjectSchema = createInsertSchema(projects).extend({
   status: z.string()

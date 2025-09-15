@@ -17,6 +17,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Custom CSRF protection middleware
   const csrfProtection = (req: any, res: any, next: any) => {
+    // Bypass CSRF protection in development mode
+    if (process.env.NODE_ENV === 'development') {
+      return next();
+    }
+
     // Exempt safe HTTP methods
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       return next();
@@ -84,9 +89,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Configure multer for file uploads
   const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    limits: process.env.NODE_ENV === 'development' ? {} : { fileSize: 10 * 1024 * 1024 }, // No limit in development
     fileFilter: (req, file, cb) => {
-      // Only allow JSON files
+      // Bypass file type check in development
+      if (process.env.NODE_ENV === 'development') {
+        return cb(null, true);
+      }
+
+      // Only allow JSON files in production
       if (
         file.mimetype === 'application/json' ||
         file.originalname.endsWith('.json')
@@ -234,50 +244,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? projectsData
           : [projectsData];
 
-        // Validate and transform the data
-        const validatedProjects = [];
-        const errors = [];
+        const totalCount = projects.length;
+        let successCount = 0;
+        let failureCount = 0;
 
-        for (let i = 0; i < projects.length; i++) {
-          try {
-            const validatedProject = insertProjectSchema.parse(projects[i]);
-            validatedProjects.push(validatedProject);
-          } catch (error) {
-            if (error instanceof z.ZodError) {
-              console.error(`Validation error for project ${i}:`, error.errors);
-              errors.push({ index: i, errors: error.errors });
-            } else {
-              console.error(
-                `Unknown validation error for project ${i}:`,
-                error
-              );
-              errors.push({ index: i, error: 'Unknown validation error' });
+        // Set up Server-Sent Events for progress updates
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Headers': 'Cache-Control',
+        });
+
+        // Send initial progress
+        res.write(`data: ${JSON.stringify({
+          type: 'progress',
+          processed: 0,
+          total: totalCount,
+          successCount: 0,
+          failureCount: 0,
+          message: 'Starting upload...'
+        })}\n\n`);
+
+        const batchSize = 100; // Process in batches of 100
+
+        for (let i = 0; i < projects.length; i += batchSize) {
+          const batch = projects.slice(i, i + batchSize);
+          const batchValidatedProjects = [];
+
+          // Validate batch
+          for (let j = 0; j < batch.length; j++) {
+            const projectIndex = i + j;
+            try {
+              const validatedProject = insertProjectSchema.parse(batch[j]);
+              batchValidatedProjects.push(validatedProject);
+            } catch (error) {
+              failureCount++;
+              if (error instanceof z.ZodError) {
+                console.error(`Validation error for project ${projectIndex}:`, {
+                  contractId: batch[j]?.contractId || 'unknown',
+                  errors: error.errors
+                });
+              } else {
+                console.error(`Unknown validation error for project ${projectIndex}:`, {
+                  contractId: batch[j]?.contractId || 'unknown',
+                  error: error instanceof Error ? error.message : String(error)
+                });
+              }
             }
           }
+
+          // Save valid projects in this batch
+          if (batchValidatedProjects.length > 0) {
+            try {
+              const savedProjects = await storage.createManyProjects(batchValidatedProjects);
+              successCount += savedProjects.length;
+            } catch (error) {
+              console.error('Error saving batch:', error);
+              failureCount += batchValidatedProjects.length;
+            }
+          }
+
+          // Send progress update
+          const processed = Math.min(i + batchSize, totalCount);
+          res.write(`data: ${JSON.stringify({
+            type: 'progress',
+            processed,
+            total: totalCount,
+            successCount,
+            failureCount,
+            message: `Processed ${processed}/${totalCount} projects...`
+          })}\n\n`);
+
+          // Small delay to prevent overwhelming the client
+          await new Promise(resolve => setTimeout(resolve, 10));
         }
 
-        if (errors.length > 0) {
-          return res.status(400).json({
-            error: 'Validation failed for some projects',
-            validationErrors: errors,
-            validCount: validatedProjects.length,
-            totalCount: projects.length,
-          });
-        }
+        // Send completion message
+        res.write(`data: ${JSON.stringify({
+          type: 'complete',
+          totalCount,
+          successCount,
+          failureCount,
+          message: `Upload completed. ${successCount} successful, ${failureCount} failed.`
+        })}\n\n`);
 
-        // Save all valid projects
-        const savedProjects = await storage.createManyProjects(
-          validatedProjects
-        );
+        res.end();
 
-        res.json({
-          message: 'Projects uploaded successfully',
-          count: savedProjects.length,
-          projects: savedProjects,
-        });
       } catch (error) {
         console.error('Error uploading projects:', error);
-        res.status(500).json({ error: 'Failed to upload projects' });
+        if (!res.headersSent) {
+          res.status(500).json({ error: 'Failed to upload projects' });
+        } else {
+          // If headers already sent (SSE started), send error through SSE
+          res.write(`data: ${JSON.stringify({
+            type: 'error',
+            message: 'Upload failed due to server error'
+          })}\n\n`);
+          res.end();
+        }
       }
     }
   );

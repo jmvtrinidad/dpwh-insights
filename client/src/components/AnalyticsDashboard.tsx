@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import ProjectsByYearList from './ProjectsByYearList';
 import {
   Select,
   SelectContent,
@@ -1220,6 +1221,12 @@ export default function AnalyticsDashboard({
                   </Card>
                 </div>
               </div>
+
+              {/* Projects by Year List Section */}
+              <div className="space-y-6">
+                <ProjectsByYearList projects={projects} isLoading={isLoading} />
+              </div>
+
               {/* Contractor Analytics Section */}
               <div className="space-y-6">
                 <h2

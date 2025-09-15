@@ -24,7 +24,7 @@ export interface FilterState {
   implementingOffice: string;
   contractor: string;
   status: string;
-  year: string;
+  year: string[];
   province: string;
   municipality: string;
   barangay: string;
@@ -37,7 +37,7 @@ export const DEFAULT_FILTER_STATE: FilterState = {
   implementingOffice: '__all__',
   contractor: '__all__',
   status: 'Completed',
-  year: '__all__',
+  year: [],
   province: '__all__',
   municipality: '__all__',
   barangay: '__all__'
@@ -62,29 +62,29 @@ const URL_PARAM_MAP = {
  */
 export function parseUrlParams(search: string): { filters: FilterState; activeTab: string } {
   const params = new URLSearchParams(search);
-  
+
   // Handle backward compatibility for implementingOffice parameter
   // Accept both "office" (current) and "implementingOffice" (legacy) parameter names
   const getImplementingOffice = () => {
-    return params.get(URL_PARAM_MAP.implementingOffice) || 
-           params.get('implementingOffice') || 
+    return params.get(URL_PARAM_MAP.implementingOffice) ||
+           params.get('implementingOffice') ||
            DEFAULT_FILTER_STATE.implementingOffice;
   };
-  
+
   const filters: FilterState = {
     search: params.get(URL_PARAM_MAP.search) || DEFAULT_FILTER_STATE.search,
     region: params.get(URL_PARAM_MAP.region) || DEFAULT_FILTER_STATE.region,
     implementingOffice: getImplementingOffice(),
     contractor: params.get(URL_PARAM_MAP.contractor) || DEFAULT_FILTER_STATE.contractor,
     status: params.get(URL_PARAM_MAP.status) || DEFAULT_FILTER_STATE.status,
-    year: params.get(URL_PARAM_MAP.year) || DEFAULT_FILTER_STATE.year,
+    year: params.get(URL_PARAM_MAP.year) ? params.get(URL_PARAM_MAP.year)!.split(',').filter(Boolean) : DEFAULT_FILTER_STATE.year,
     province: params.get(URL_PARAM_MAP.province) || DEFAULT_FILTER_STATE.province,
     municipality: params.get(URL_PARAM_MAP.municipality) || DEFAULT_FILTER_STATE.municipality,
     barangay: params.get(URL_PARAM_MAP.barangay) || DEFAULT_FILTER_STATE.barangay
   };
-  
+
   const activeTab = params.get(URL_PARAM_MAP.tab) || 'analytics';
-  
+
   return { filters, activeTab };
 }
 
@@ -93,48 +93,48 @@ export function parseUrlParams(search: string): { filters: FilterState; activeTa
  */
 export function buildUrlParams(filters: FilterState, activeTab: string): string {
   const params = new URLSearchParams();
-  
+
   // Only add parameters that differ from defaults to keep URLs clean
   if (filters.search && filters.search.trim() !== '') {
     params.set(URL_PARAM_MAP.search, filters.search);
   }
-  
+
   if (filters.region !== DEFAULT_FILTER_STATE.region) {
     params.set(URL_PARAM_MAP.region, filters.region);
   }
-  
+
   if (filters.implementingOffice !== DEFAULT_FILTER_STATE.implementingOffice) {
     params.set(URL_PARAM_MAP.implementingOffice, filters.implementingOffice);
   }
-  
+
   if (filters.contractor !== DEFAULT_FILTER_STATE.contractor) {
     params.set(URL_PARAM_MAP.contractor, filters.contractor);
   }
-  
+
   if (filters.status !== DEFAULT_FILTER_STATE.status) {
     params.set(URL_PARAM_MAP.status, filters.status);
   }
-  
-  if (filters.year !== DEFAULT_FILTER_STATE.year) {
-    params.set(URL_PARAM_MAP.year, filters.year);
+
+  if (filters.year.length > 0) {
+    params.set(URL_PARAM_MAP.year, filters.year.join(','));
   }
-  
+
   if (filters.province !== DEFAULT_FILTER_STATE.province) {
     params.set(URL_PARAM_MAP.province, filters.province);
   }
-  
+
   if (filters.municipality !== DEFAULT_FILTER_STATE.municipality) {
     params.set(URL_PARAM_MAP.municipality, filters.municipality);
   }
-  
+
   if (filters.barangay !== DEFAULT_FILTER_STATE.barangay) {
     params.set(URL_PARAM_MAP.barangay, filters.barangay);
   }
-  
+
   if (activeTab !== 'analytics') {
     params.set(URL_PARAM_MAP.tab, activeTab);
   }
-  
+
   return params.toString();
 }
 
@@ -144,7 +144,7 @@ export function buildUrlParams(filters: FilterState, activeTab: string): string 
 export function updateUrlWithState(filters: FilterState, activeTab: string): void {
   const newSearch = buildUrlParams(filters, activeTab);
   const newUrl = newSearch ? `${window.location.pathname}?${newSearch}` : window.location.pathname;
-  
+
   // Use replaceState to avoid cluttering browser history
   window.history.replaceState(null, '', newUrl);
 }

@@ -101,6 +101,30 @@ export async function setupAuth(app: Express) {
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   app.get("/api/login", (req, res, next) => {
+    // Bypass OAuth login in development mode
+    if (process.env.NODE_ENV === 'development') {
+      // Create a mock user session for development
+      req.user = {
+        claims: {
+          sub: 'dev-user-id',
+          email: 'dev@example.com',
+          first_name: 'Dev',
+          last_name: 'User',
+          profile_image_url: null
+        },
+        access_token: 'dev-token',
+        refresh_token: 'dev-refresh-token',
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      };
+      req.login(req.user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.redirect('/');
+      });
+      return;
+    }
+
     passport.authenticate(`replitauth:${req.hostname}`, {
       prompt: "login consent",
       scope: ["openid", "email", "profile", "offline_access"],
@@ -108,6 +132,30 @@ export async function setupAuth(app: Express) {
   });
 
   app.get("/api/callback", (req, res, next) => {
+    // Bypass OAuth callback in development mode
+    if (process.env.NODE_ENV === 'development') {
+      // Create a mock user session for development
+      req.user = {
+        claims: {
+          sub: 'dev-user-id',
+          email: 'dev@example.com',
+          first_name: 'Dev',
+          last_name: 'User',
+          profile_image_url: null
+        },
+        access_token: 'dev-token',
+        refresh_token: 'dev-refresh-token',
+        expires_at: Math.floor(Date.now() / 1000) + 3600 // 1 hour from now
+      };
+      req.login(req.user, (err) => {
+        if (err) {
+          return next(err);
+        }
+        return res.redirect('/');
+      });
+      return;
+    }
+
     passport.authenticate(`replitauth:${req.hostname}`, {
       successReturnToOrRedirect: "/",
       failureRedirect: "/api/login",

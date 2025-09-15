@@ -12,6 +12,8 @@ interface AdminLoginProps {
   onDataUpload: (files: FileList) => void;
   isUploading?: boolean;
   uploadProgress?: number;
+  currentFileIndex?: number;
+  totalFiles?: number;
 }
 
 export default function AdminLogin({
@@ -20,7 +22,9 @@ export default function AdminLogin({
   onLogout,
   onDataUpload,
   isUploading = false,
-  uploadProgress = 0
+  uploadProgress = 0,
+  currentFileIndex = 0,
+  totalFiles = 0
 }: AdminLoginProps) {
   const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [dragActive, setDragActive] = useState(false);
@@ -55,7 +59,7 @@ export default function AdminLogin({
     }
   };
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated && process.env.NODE_ENV !== 'development') {
     return (
       <Card className="w-full max-w-md mx-auto">
         <CardHeader className="text-center">
@@ -134,7 +138,12 @@ export default function AdminLogin({
             data-testid="button-open-upload"
           >
             <Upload className="h-4 w-4 mr-2" />
-            {isUploading ? `Uploading... ${uploadProgress}%` : 'Upload Project Data'}
+            {isUploading
+              ? totalFiles > 1
+                ? `Uploading file ${currentFileIndex} of ${totalFiles}... ${uploadProgress}%`
+                : `Uploading... ${uploadProgress}%`
+              : 'Upload Project Data'
+            }
           </Button>
 
           <div className="grid grid-cols-2 gap-4 text-sm">
@@ -167,7 +176,7 @@ export default function AdminLogin({
               Upload JSON files containing DPWH project data. Files will be validated against the schema.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-4">
             <div
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
