@@ -150,16 +150,16 @@ export function updateUrlWithState(filters: FilterState, activeTab: string): voi
 }
 
 /**
+ * Immediate URL update for non-search filters and tab changes
+ */
+export function updateUrlImmediately(filters: FilterState, activeTab: string): void {
+  updateUrlWithState(filters, activeTab);
+}
+
+/**
  * Create debounced version of URL update specifically for search parameter
  * This reduces the number of URL updates during typing
  */
 export const debouncedUpdateUrlForSearch = debounce((filters: FilterState, activeTab: string) => {
   updateUrlWithState(filters, activeTab);
 }, 300);
-
-/**
- * Immediate URL update for non-search filters and tab changes
- */
-export function updateUrlImmediately(filters: FilterState, activeTab: string): void {
-  updateUrlWithState(filters, activeTab);
-}
