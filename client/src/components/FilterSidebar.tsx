@@ -107,7 +107,7 @@ export default function FilterSidebar({
             <X className="h-4 w-4" />
           </Button>
         </div>
-        
+
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} applied
@@ -160,7 +160,19 @@ export default function FilterSidebar({
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-3 mt-3">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Region</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Region</label>
+                    {filters.region && filters.region !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('region', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.region} onValueChange={(value) => onFilterChange('region', value)}>
                     <SelectTrigger data-testid="select-region">
                       <SelectValue placeholder="All regions" />
@@ -175,7 +187,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Implementing Office</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Implementing Office</label>
+                    {filters.implementingOffice && filters.implementingOffice !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('implementingOffice', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.implementingOffice} onValueChange={(value) => onFilterChange('implementingOffice', value)}>
                     <SelectTrigger data-testid="select-implementing-office">
                       <SelectValue placeholder="All offices" />
@@ -190,7 +214,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Province</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Province</label>
+                    {filters.province && filters.province !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('province', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.province} onValueChange={(value) => onFilterChange('province', value)}>
                     <SelectTrigger data-testid="select-province">
                       <SelectValue placeholder="All provinces" />
@@ -205,7 +241,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Municipality</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Municipality</label>
+                    {filters.municipality && filters.municipality !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('municipality', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.municipality} onValueChange={(value) => onFilterChange('municipality', value)}>
                     <SelectTrigger data-testid="select-municipality">
                       <SelectValue placeholder="All municipalities" />
@@ -220,7 +268,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Barangay</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Barangay</label>
+                    {filters.barangay && filters.barangay !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('barangay', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.barangay} onValueChange={(value) => onFilterChange('barangay', value)}>
                     <SelectTrigger data-testid="select-barangay">
                       <SelectValue placeholder="All barangays" />
@@ -253,7 +313,19 @@ export default function FilterSidebar({
               </CollapsibleTrigger>
               <CollapsibleContent className="space-y-3 mt-3">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Status</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Status</label>
+                    {filters.status && filters.status !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('status', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.status} onValueChange={(value) => onFilterChange('status', value)}>
                     <SelectTrigger data-testid="select-status">
                       <SelectValue placeholder="All statuses" />
@@ -268,7 +340,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Year</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Year</label>
+                    {filters.year && filters.year !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('year', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.year} onValueChange={(value) => onFilterChange('year', value)}>
                     <SelectTrigger data-testid="select-year">
                       <SelectValue placeholder="All years" />
@@ -283,7 +367,19 @@ export default function FilterSidebar({
                 </div>
 
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground mb-2 block">Contractor</label>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-sm font-medium text-muted-foreground">Contractor</label>
+                    {filters.contractor && filters.contractor !== '__all__' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4"
+                        onClick={() => onFilterChange('contractor', '__all__')}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    )}
+                  </div>
                   <Select value={filters.contractor} onValueChange={(value) => onFilterChange('contractor', value)}>
                     <SelectTrigger data-testid="select-contractor">
                       <SelectValue placeholder="All contractors" />
@@ -312,14 +408,14 @@ export default function FilterSidebar({
               <Badge
                 key={key}
                 variant="secondary"
-                className="text-xs"
+                className="text-xs max-w-[250px] truncate"
               >
                 {label}: {value}
                 <Button
                   variant="ghost"
                   size="icon"
                   className="ml-1 h-3 w-3"
-                  onClick={() => onFilterChange(key, '')}
+                  onClick={() => onFilterChange(key, '__all__')}
                   data-testid={`button-remove-filter-${key}`}
                 >
                   <X className="h-2 w-2" />

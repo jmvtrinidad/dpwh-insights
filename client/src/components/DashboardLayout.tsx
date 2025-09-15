@@ -9,12 +9,13 @@ import AnalyticsDashboard from "./AnalyticsDashboard";
 import ProjectsTable from "./ProjectsTable";
 import AdminLogin from "./AdminLogin";
 import ThemeToggle from "./ThemeToggle";
+import Footer from "./Footer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BarChart3, Table, Settings, Filter, X, Menu } from "lucide-react";
-import { 
-  FilterState, 
-  DEFAULT_FILTER_STATE, 
-  parseUrlParams, 
+import {
+  FilterState,
+  DEFAULT_FILTER_STATE,
+  parseUrlParams,
   buildUrlParams,
   updateUrlWithState,
   debouncedUpdateUrlForSearch,
@@ -71,21 +72,21 @@ export default function DashboardLayout({
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTER_STATE);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isUpdatingFromUrl, setIsUpdatingFromUrl] = useState(false);
-  
+
   // Track previous location search to detect URL changes
   const prevLocationSearchRef = useRef<string>('');
-  
+
   // Initialize sidebar state based on mobile
   useEffect(() => {
     if (isMobile) {
       setIsSidebarCollapsed(true);
     }
   }, [isMobile]);
-  
+
   // Single useEffect to handle initialization from URL
   useEffect(() => {
     const fullSearch = window.location.search;
-    
+
     // Initialize state from URL parameters on first load
     if (!isInitialized) {
       console.log('Initializing dashboard state from window.location.search:', fullSearch);
@@ -101,16 +102,16 @@ export default function DashboardLayout({
   useEffect(() => {
     const handlePopState = () => {
       const fullSearch = window.location.search;
-      
+
       if (!isUpdatingFromUrl && fullSearch !== prevLocationSearchRef.current) {
         console.log('Browser navigation detected, updating state from window.location.search:', fullSearch);
         setIsUpdatingFromUrl(true);
-        
+
         const urlParams = parseUrlParams(fullSearch);
         setFilters(urlParams.filters);
         setActiveTab(urlParams.activeTab);
         prevLocationSearchRef.current = fullSearch;
-        
+
         // Reset the flag after state updates
         setIsUpdatingFromUrl(false);
       }
@@ -155,11 +156,11 @@ export default function DashboardLayout({
         ...project.contractor.map(c => c.toLowerCase()),
         project.implementingOffice?.toLowerCase() || ''
       ];
-      
-      const matchesSearch = searchableFields.some(field => 
+
+      const matchesSearch = searchableFields.some(field =>
         field.includes(searchTerm)
       );
-      
+
       if (!matchesSearch) return false;
     }
 
@@ -167,12 +168,12 @@ export default function DashboardLayout({
     return Object.entries(filters).every(([key, value]) => {
       if (key === 'search') return true; // Already handled above
       if (!value || value === '__all__') return true;
-      
+
       // Handle contractor filter specially since it's an array
       if (key === 'contractor') {
         return project.contractor.includes(value);
       }
-      
+
       return project[key as keyof Project] === value;
     });
   });
@@ -184,7 +185,7 @@ export default function DashboardLayout({
       [key]: value
     };
     setFilters(newFilters);
-    
+
     // For search filter, use debounced update; for others, update immediately
     if (!isUpdatingFromUrl) {
       if (key === 'search') {
@@ -200,7 +201,7 @@ export default function DashboardLayout({
   const handleClearFilters = () => {
     console.log('Clearing all filters');
     setFilters(DEFAULT_FILTER_STATE);
-    
+
     // Update URL immediately when clearing filters
     if (!isUpdatingFromUrl) {
       updateUrlImmediately(DEFAULT_FILTER_STATE, activeTab);
@@ -212,7 +213,7 @@ export default function DashboardLayout({
   const handleTabChange = (newTab: string) => {
     console.log(`Tab changed to: ${newTab}`);
     setActiveTab(newTab);
-    
+
     // Update URL immediately when tab changes
     if (!isUpdatingFromUrl) {
       updateUrlImmediately(filters, newTab);
@@ -221,7 +222,7 @@ export default function DashboardLayout({
     }
   };
 
-  const activeFiltersCount = Object.entries(filters).filter(([key, value]) => 
+  const activeFiltersCount = Object.entries(filters).filter(([key, value]) =>
     key !== 'search' && value && value !== '__all__'
   ).length;
 
@@ -283,7 +284,7 @@ export default function DashboardLayout({
                   <Menu className="h-5 w-5" />
                 </Button>
               )}
-              
+
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 md:w-8 md:h-8 bg-primary rounded-md flex items-center justify-center">
                   <BarChart3 className="h-4 w-4 md:h-5 md:w-5 text-primary-foreground" />
@@ -296,7 +297,7 @@ export default function DashboardLayout({
                   <h1 className="text-lg font-semibold text-card-foreground">DPWH</h1>
                 </div>
               </div>
-              
+
               {activeFiltersCount > 0 && (
                 <Badge variant="secondary" className="ml-4" data-testid="badge-active-filters">
                   <Filter className="h-3 w-3 mr-1" />
@@ -329,8 +330,8 @@ export default function DashboardLayout({
           <Tabs value={activeTab} onValueChange={handleTabChange} className="h-full flex flex-col">
             <div className="border-b border-border">
               <TabsList className="inline-flex h-10 md:h-12 items-center justify-start md:justify-center rounded-none bg-transparent p-1 text-muted-foreground overflow-x-auto whitespace-nowrap -mx-2 px-4 md:mx-4 md:mt-2">
-                <TabsTrigger 
-                  value="analytics" 
+                <TabsTrigger
+                  value="analytics"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   data-testid="tab-analytics"
                 >
@@ -338,8 +339,8 @@ export default function DashboardLayout({
                   <span className="hidden sm:inline">Analytics</span>
                   <span className="sm:hidden">Charts</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="table" 
+                <TabsTrigger
+                  value="table"
                   className="inline-flex items-center justify-center whitespace-nowrap rounded-sm px-2 md:px-3 py-1.5 text-xs md:text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   data-testid="tab-table"
                 >
@@ -374,6 +375,8 @@ export default function DashboardLayout({
             </div>
           </Tabs>
         </main>
+
+        <Footer />
       </div>
     </div>
   );

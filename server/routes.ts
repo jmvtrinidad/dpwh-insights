@@ -35,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin authorization middleware
   const AUTHORIZED_ADMIN_EMAILS = [
     'jmvtrinidad16@gmail.com',
-    'janmvtrinidad@gmail.com'
+    ' trinidad@gmail.com'
   ];
 
   const isAuthorizedAdmin = async (req: any, res: any, next: any) => {
