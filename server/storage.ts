@@ -1,5 +1,7 @@
-import { type User, type UpsertUser, type Project, type InsertProject, type UpdateProject } from "@shared/schema";
+import { type User, type UpsertUser, type Project, type InsertProject, type UpdateProject, projects, users } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { db } from "./db";
+import { eq, inArray } from "drizzle-orm";
 
 // modify the interface with any CRUD methods
 // you might need
@@ -46,6 +48,10 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...userData,
       id: userData.id!,
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
       createdAt: existingUser?.createdAt || now,
       updatedAt: now,
     };
@@ -59,6 +65,10 @@ export class MemStorage implements IStorage {
     const user: User = {
       ...userData,
       id: userData.id || randomUUID(),
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -122,4 +132,156 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export class DbStorage implements IStorage {
+  // User operations (required for Replit Auth)
+  async getUser(id: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
+    return result[0];
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db.select().from(users).where(eq(users.email, username)).limit(1);
+    return result[0];
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const userToInsert = {
+      ...userData,
+      id: userData.id!,
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await db.insert(users)
+      .values(userToInsert)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          email: userData.email || null,
+          firstName: userData.firstName || null,
+          lastName: userData.lastName || null,
+          profileImageUrl: userData.profileImageUrl || null,
+          updatedAt: now,
+        }
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const userToInsert = {
+      ...userData,
+      id: userData.id || randomUUID(),
+      email: userData.email || null,
+      firstName: userData.firstName || null,
+      lastName: userData.lastName || null,
+      profileImageUrl: userData.profileImageUrl || null,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const result = await db.insert(users).values(userToInsert).returning();
+    return result[0];
+  }
+
+  // Project operations
+  async getProject(contractId: string): Promise<Project | undefined> {
+    const result = await db.select().from(projects).where(eq(projects.contractId, contractId)).limit(1);
+    return result[0];
+  }
+
+  async getAllProjects(): Promise<Project[]> {
+    const result = await db.select().from(projects);
+    return result;
+  }
+
+  async createProject(insertProject: InsertProject): Promise<Project> {
+    const projectToInsert = {
+      ...insertProject,
+      sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
+      sourceOfFundsYear: insertProject.sourceOfFundsYear || "",
+      sourceOfFundsSource: insertProject.sourceOfFundsSource || "",
+      province: insertProject.province || "",
+      municipality: insertProject.municipality || "",
+      barangay: insertProject.barangay || "",
+    };
+
+    const result = await db.insert(projects)
+      .values(projectToInsert)
+      .onConflictDoUpdate({
+        target: projects.contractId,
+        set: projectToInsert
+      })
+      .returning();
+    
+    return result[0];
+  }
+
+  async updateProject(contractId: string, updateProject: UpdateProject): Promise<Project | undefined> {
+    const result = await db.update(projects)
+      .set(updateProject)
+      .where(eq(projects.contractId, contractId))
+      .returning();
+    
+    return result[0];
+  }
+
+  async deleteProject(contractId: string): Promise<boolean> {
+    const result = await db.delete(projects)
+      .where(eq(projects.contractId, contractId))
+      .returning();
+    
+    return result.length > 0;
+  }
+
+  async createManyProjects(insertProjects: InsertProject[]): Promise<Project[]> {
+    if (insertProjects.length === 0) {
+      return [];
+    }
+
+    const projectsToInsert = insertProjects.map(insertProject => ({
+      ...insertProject,
+      sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
+      sourceOfFundsYear: insertProject.sourceOfFundsYear || "",
+      sourceOfFundsSource: insertProject.sourceOfFundsSource || "",
+      province: insertProject.province || "",
+      municipality: insertProject.municipality || "",
+      barangay: insertProject.barangay || "",
+    }));
+
+    // Use upsert approach for batch insertion
+    const result = [];
+    
+    // Process in batches to avoid potential query size limits
+    const batchSize = 100;
+    for (let i = 0; i < projectsToInsert.length; i += batchSize) {
+      const batch = projectsToInsert.slice(i, i + batchSize);
+      
+      for (const project of batch) {
+        const insertResult = await db.insert(projects)
+          .values(project)
+          .onConflictDoUpdate({
+            target: projects.contractId,
+            set: project
+          })
+          .returning();
+        
+        if (insertResult[0]) {
+          result.push(insertResult[0]);
+        }
+      }
+    }
+    
+    return result;
+  }
+}
+
+// Use database storage instead of memory storage
+export const storage = new DbStorage();
