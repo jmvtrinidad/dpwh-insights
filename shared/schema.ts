@@ -70,10 +70,24 @@ export const insertProjectSchema = createInsertSchema(projects).extend({
       return found || normalizedVal;
     })
     .pipe(z.enum(PROJECT_STATUS_VALUES)),
-  // Make location fields truly optional
-  province: z.string().default(""),
-  municipality: z.string().default(""),
-  barangay: z.string().default("")
+  // Handle null values for location fields
+  province: z.union([z.string(), z.null()]).transform(val => val || ""),
+  municipality: z.union([z.string(), z.null()]).transform(val => val || ""),
+  barangay: z.union([z.string(), z.null()]).transform(val => val || ""),
+  // Handle float to integer conversion for contract cost
+  contractCost: z.union([z.number(), z.string()])
+    .transform(val => {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return Math.round(num);
+    })
+    .pipe(z.number().int()),
+  // Handle float to integer for accomplishment percentage
+  accomplishmentInPercentage: z.union([z.number(), z.string()])
+    .transform(val => {
+      const num = typeof val === 'string' ? parseFloat(val) : val;
+      return Math.round(num);
+    })
+    .pipe(z.number().int())
 });
 export const updateProjectSchema = insertProjectSchema.partial();
 
