@@ -1,13 +1,15 @@
-import { type User, type InsertUser, type Project, type InsertProject, type UpdateProject } from "@shared/schema";
+import { type User, type UpsertUser, type Project, type InsertProject, type UpdateProject } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
 // you might need
 
 export interface IStorage {
+  // User operations (required for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
   getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createUser(user: UpsertUser): Promise<User>;
   
   // Project operations
   getProject(contractId: string): Promise<Project | undefined>;
@@ -33,14 +35,34 @@ export class MemStorage implements IStorage {
 
   async getUserByUsername(username: string): Promise<User | undefined> {
     return Array.from(this.users.values()).find(
-      (user) => user.username === username,
+      (user) => user.email === username,
     );
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const existingUser = this.users.get(userData.id!);
+    
+    const user: User = {
+      ...userData,
+      id: userData.id!,
+      createdAt: existingUser?.createdAt || now,
+      updatedAt: now,
+    };
+    
+    this.users.set(user.id, user);
+    return user;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const now = new Date();
+    const user: User = {
+      ...userData,
+      id: userData.id || randomUUID(),
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.users.set(user.id, user);
     return user;
   }
 
@@ -56,12 +78,12 @@ export class MemStorage implements IStorage {
   async createProject(insertProject: InsertProject): Promise<Project> {
     const project: Project = {
       ...insertProject,
-      sourceOfFundsDesc: insertProject.sourceOfFundsDesc ?? null,
-      sourceOfFundsYear: insertProject.sourceOfFundsYear ?? null,
-      sourceOfFundsSource: insertProject.sourceOfFundsSource ?? null,
-      province: insertProject.province ?? null,
-      municipality: insertProject.municipality ?? null,
-      barangay: insertProject.barangay ?? null,
+      sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
+      sourceOfFundsYear: insertProject.sourceOfFundsYear || "",
+      sourceOfFundsSource: insertProject.sourceOfFundsSource || "",
+      province: insertProject.province || "",
+      municipality: insertProject.municipality || "",
+      barangay: insertProject.barangay || "",
     };
     this.projects.set(project.contractId, project);
     return project;
@@ -86,12 +108,12 @@ export class MemStorage implements IStorage {
     for (const insertProject of insertProjects) {
       const project: Project = {
         ...insertProject,
-        sourceOfFundsDesc: insertProject.sourceOfFundsDesc ?? null,
-        sourceOfFundsYear: insertProject.sourceOfFundsYear ?? null,
-        sourceOfFundsSource: insertProject.sourceOfFundsSource ?? null,
-        province: insertProject.province ?? null,
-        municipality: insertProject.municipality ?? null,
-        barangay: insertProject.barangay ?? null,
+        sourceOfFundsDesc: insertProject.sourceOfFundsDesc || "",
+        sourceOfFundsYear: insertProject.sourceOfFundsYear || "",
+        sourceOfFundsSource: insertProject.sourceOfFundsSource || "",
+        province: insertProject.province || "",
+        municipality: insertProject.municipality || "",
+        barangay: insertProject.barangay || "",
       };
       this.projects.set(project.contractId, project);
       projects.push(project);

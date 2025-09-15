@@ -1,6 +1,6 @@
 import { Switch, Route } from "wouter";
 import { queryClient } from "./lib/queryClient";
-import { QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider, useQuery, useMutation } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -8,236 +8,161 @@ import NotFound from "@/pages/not-found";
 import UrlParamsTest from "@/pages/url-params-test";
 import UrlDebug from "@/pages/url-debug";
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { useCsrf } from "@/hooks/useCsrf";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { clearCsrfToken } from "@/lib/csrfUtils";
+import { apiRequest } from "./lib/queryClient";
+import type { Project } from "@shared/schema";
 
-// todo: remove mock data - this will be replaced with real API calls
-const mockProjects = [
-  {
-    contractId: "25HN0043",
-    contractName: "OO2: PROTECT LIVES AND PROPERTIES AGAINST MAJOR FLOODS-FLOOD MANAGEMENT PROGRAM-CONST./ MAINT. OF FLOOD MITIGATION STRUCTURES AND DRAINAGE SYS.- CONST. OF FLOOD CONTROL STRUCTURE ALONG BUTUANON RIVER (DOWNSTREAM) OUTFALL, BRGY. PAKNA-AN, MANDAUE CITY",
-    contractor: "ON POINT CONSTRUCTION AND DEVELOPMENT CORPORATION (FORMERLY:ON POINT CONSTRUCTION) (38852)",
-    implementingOffice: "Cebu 6th District Engineering Office",
-    contractCost: 72325000,
-    contractEffectivityDate: "February 21, 2025",
-    contractExpiryDate: "November 2, 2025",
-    status: "Completed",
-    accomplishmentInPercentage: 100,
-    region: "Region VII",
-    sourceOfFundsDesc: "Regular Infra",
-    sourceOfFundsYear: "GAA 2025",
-    sourceOfFundsSource: "OO-2",
-    year: "2025",
-    province: "Region VII (Central Visayas)",
-    municipality: "City of Mandaue",
-    barangay: "Pakna-an"
-  },
-  {
-    contractId: "24HN0032",
-    contractName: "ROAD IMPROVEMENT PROJECT ALONG NATIONAL HIGHWAY - PHASE 1 IMPLEMENTATION WITH ADDITIONAL SAFETY MEASURES",
-    contractor: "ABC Construction Company (12345)",
-    implementingOffice: "Manila District Engineering Office",
-    contractCost: 150000000,
-    contractEffectivityDate: "January 15, 2024",
-    contractExpiryDate: "December 15, 2024",
-    status: "On-going",
-    accomplishmentInPercentage: 75,
-    region: "Region IV-A",
-    sourceOfFundsDesc: "Regular Infra",
-    sourceOfFundsYear: "GAA 2024",
-    sourceOfFundsSource: "OO-1",
-    year: "2024",
-    province: "Metro Manila",
-    municipality: "Manila City",
-    barangay: "Ermita"
-  },
-  {
-    contractId: "23HN0021",
-    contractName: "BRIDGE CONSTRUCTION PROJECT OVER PASIG RIVER - MODERN SUSPENSION BRIDGE WITH PEDESTRIAN WALKWAYS",
-    contractor: "XYZ Engineering Services Corporation (67890)",
-    implementingOffice: "Metro Manila Engineering Office",
-    contractCost: 250000000,
-    contractEffectivityDate: "March 10, 2023",
-    contractExpiryDate: "March 10, 2025",
-    status: "On-going",
-    accomplishmentInPercentage: 60,
-    region: "NCR",
-    sourceOfFundsDesc: "Bridge Program",
-    sourceOfFundsYear: "GAA 2023",
-    sourceOfFundsSource: "BP-1",
-    year: "2023",
-    province: "Metro Manila",
-    municipality: "Pasig City",
-    barangay: "Kapitolyo"
-  },
-  {
-    contractId: "24HN0055",
-    contractName: "DRAINAGE SYSTEM IMPROVEMENT IN URBAN AREAS - SMART FLOOD CONTROL SYSTEM WITH IoT MONITORING",
-    contractor: "DEF Infrastructure Corporation (11111)",
-    implementingOffice: "Cebu 6th District Engineering Office",
-    contractCost: 89000000,
-    contractEffectivityDate: "June 1, 2024",
-    contractExpiryDate: "May 31, 2025",
-    status: "Completed",
-    accomplishmentInPercentage: 100,
-    region: "Region VII",
-    sourceOfFundsDesc: "Drainage Program",
-    sourceOfFundsYear: "GAA 2024",
-    sourceOfFundsSource: "DP-1",
-    year: "2024",
-    province: "Cebu",
-    municipality: "Cebu City",
-    barangay: "Lahug"
-  },
-  {
-    contractId: "22HN0018",
-    contractName: "COASTAL ROAD DEVELOPMENT PROJECT - PHASE 2 WITH ENVIRONMENTAL PROTECTION MEASURES",
-    contractor: "GHI Construction Limited (22222)",
-    implementingOffice: "Davao District Engineering Office",
-    contractCost: 180000000,
-    contractEffectivityDate: "August 15, 2022",
-    contractExpiryDate: "August 15, 2024",
-    status: "Completed",
-    accomplishmentInPercentage: 100,
-    region: "Region XI",
-    sourceOfFundsDesc: "Tourism Infrastructure",
-    sourceOfFundsYear: "GAA 2022",
-    sourceOfFundsSource: "TI-1",
-    year: "2022",
-    province: "Davao del Sur",
-    municipality: "Davao City",
-    barangay: "Poblacion"
-  },
-  {
-    contractId: "23HN0067",
-    contractName: "SCHOOL BUILDING CONSTRUCTION PROJECT - ELEMENTARY SCHOOL WITH MODERN FACILITIES",
-    contractor: "JKL Educational Builders Inc (33333)",
-    implementingOffice: "Iloilo District Engineering Office",
-    contractCost: 45000000,
-    contractEffectivityDate: "September 1, 2023",
-    contractExpiryDate: "August 31, 2024",
-    status: "On-going",
-    accomplishmentInPercentage: 85,
-    region: "Region VI",
-    sourceOfFundsDesc: "Education Infrastructure",
-    sourceOfFundsYear: "GAA 2023",
-    sourceOfFundsSource: "EI-1",
-    year: "2023",
-    province: "Iloilo",
-    municipality: "Iloilo City",
-    barangay: "Molo"
-  },
-  {
-    contractId: "21HN0003",
-    contractName: "WATER SUPPLY SYSTEM IMPROVEMENT - RURAL WATER DISTRIBUTION NETWORK EXPANSION",
-    contractor: "MNO Water Solutions Corp (44444)",
-    implementingOffice: "Baguio District Engineering Office",
-    contractCost: 95000000,
-    contractEffectivityDate: "April 12, 2021",
-    contractExpiryDate: "April 12, 2023",
-    status: "Completed",
-    accomplishmentInPercentage: 100,
-    region: "CAR",
-    sourceOfFundsDesc: "Water Infrastructure",
-    sourceOfFundsYear: "GAA 2021",
-    sourceOfFundsSource: "WI-1",
-    year: "2021",
-    province: "Benguet",
-    municipality: "Baguio City",
-    barangay: "Session Road"
-  },
-  {
-    contractId: "24HN0089",
-    contractName: "AIRPORT RUNWAY REHABILITATION PROJECT - PHASE 1 WITH MODERN LIGHTING SYSTEMS",
-    contractor: "PQR Aviation Infrastructure Ltd (55555)",
-    implementingOffice: "Zamboanga District Engineering Office",
-    contractCost: 320000000,
-    contractEffectivityDate: "November 5, 2024",
-    contractExpiryDate: "November 5, 2026",
-    status: "On-going",
-    accomplishmentInPercentage: 25,
-    region: "Region IX",
-    sourceOfFundsDesc: "Transportation Infrastructure",
-    sourceOfFundsYear: "GAA 2024",
-    sourceOfFundsSource: "TI-2",
-    year: "2024",
-    province: "Zamboanga del Sur",
-    municipality: "Zamboanga City",
-    barangay: "Ayala"
-  },
-  {
-    contractId: "23HN0012",
-    contractName: "HIGHWAY EXPANSION PROJECT - 4-LANE CONVERSION WITH SAFETY BARRIERS",
-    contractor: "STU Highway Contractors (66666)",
-    implementingOffice: "Batangas District Engineering Office",
-    contractCost: 210000000,
-    contractEffectivityDate: "February 20, 2023",
-    contractExpiryDate: "February 20, 2025",
-    status: "On-going",
-    accomplishmentInPercentage: 70,
-    region: "Region IV-A",
-    sourceOfFundsDesc: "Highway Program",
-    sourceOfFundsYear: "GAA 2023",
-    sourceOfFundsSource: "HP-1",
-    year: "2023",
-    province: "Batangas",
-    municipality: "Batangas City",
-    barangay: "Kumintang"
-  },
-  {
-    contractId: "22HN0045",
-    contractName: "GOVERNMENT BUILDING CONSTRUCTION - MUNICIPAL HALL WITH MODERN FACILITIES",
-    contractor: "VWX Government Builders Corp (77777)",
-    implementingOffice: "Cagayan District Engineering Office",
-    contractCost: 85000000,
-    contractEffectivityDate: "July 10, 2022",
-    contractExpiryDate: "July 10, 2024",
-    status: "Completed",
-    accomplishmentInPercentage: 100,
-    region: "Region II",
-    sourceOfFundsDesc: "Government Infrastructure",
-    sourceOfFundsYear: "GAA 2022",
-    sourceOfFundsSource: "GI-1",
-    year: "2022",
-    province: "Cagayan",
-    municipality: "Tuguegarao City",
-    barangay: "Centro"
-  }
-];
 
 function DashboardPage() {
-  // todo: remove mock functionality
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const { toast } = useToast();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { csrfToken, isLoading: csrfLoading } = useCsrf();
+
+  // Fetch projects from the database
+  const { 
+    data: projects = [], 
+    isLoading, 
+    error,
+    refetch 
+  } = useQuery<Project[]>({
+    queryKey: ['/api/projects'],
+    enabled: true
+  });
+
+  // Upload mutation with proper auth and CSRF handling
+  const uploadMutation = useMutation({
+    mutationFn: async (file: File) => {
+      if (!csrfToken) {
+        throw new Error('CSRF token not available');
+      }
+      
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await fetch('/api/projects/upload', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        headers: {
+          'X-CSRF-Token': csrfToken,
+        },
+      });
+      
+      // Clear CSRF token on 403 to force refresh
+      if (response.status === 403) {
+        clearCsrfToken();
+      }
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        const error = new Error(errorData.error || 'Upload failed') as Error & { status?: number };
+        error.status = response.status;
+        throw error;
+      }
+      
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Upload Successful",
+        description: `Successfully uploaded ${data.count} projects to the database.`,
+      });
+      // Invalidate and refetch projects to show the new data
+      queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
+    },
+    onError: (error: Error & { status?: number }) => {
+      console.error('Upload error:', error);
+      
+      if (error.status === 401 || isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
+      toast({
+        title: "Upload Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleLogin = () => {
-    console.log('Admin login triggered');
-    setIsAuthenticated(true);
+    window.location.href = '/api/login';
   };
 
   const handleLogout = () => {
-    console.log('Admin logout triggered');
-    setIsAuthenticated(false);
+    window.location.href = '/api/logout';
   };
 
   const handleDataUpload = async (files: FileList) => {
+    if (files.length === 0) return;
+    
     console.log('Data upload triggered with files:', files);
     setIsUploading(true);
-    
-    // todo: remove mock functionality - simulate upload progress
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-      setUploadProgress(i);
-    }
-    
-    setIsUploading(false);
     setUploadProgress(0);
-    alert(`Successfully processed ${files.length} file(s) with ${mockProjects.length} total projects`);
+    
+    try {
+      const uploadPromises = Array.from(files).map((file, index) => {
+        return new Promise<void>((resolve, reject) => {
+          uploadMutation.mutate(file, {
+            onSuccess: () => {
+              setUploadProgress(Math.round(((index + 1) / files.length) * 100));
+              resolve();
+            },
+            onError: (error) => {
+              reject(error);
+            }
+          });
+        });
+      });
+      
+      await Promise.all(uploadPromises);
+      
+      toast({
+        title: "All Files Processed",
+        description: `Successfully processed all ${files.length} file(s).`,
+      });
+    } catch (error) {
+      console.error('Upload process failed:', error);
+      const err = error as Error & { status?: number };
+      if (err.status === 401 || isUnauthorizedError(err)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+      }
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
   };
+
+  // Show error state if there's an error loading projects
+  if (error) {
+    console.error('Error loading projects:', error);
+  }
 
   return (
     <DashboardLayout
-      projects={mockProjects}
-      isLoading={false}
+      projects={projects}
+      isLoading={isLoading || authLoading || csrfLoading}
       isAuthenticated={isAuthenticated}
       onLogin={handleLogin}
       onLogout={handleLogout}
